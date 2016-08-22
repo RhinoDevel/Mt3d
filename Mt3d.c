@@ -12,8 +12,9 @@
 static const double EQUAL_D_AND_E = 0.0;
 static const double CEILING_HEIGHT = 1.0;
 
-static void fillDAndE(int const inHeight, int const inBeta, double const inH, double * const inOutD, double * const inOutE)
+static int getFloorYAndFillDAndE(int const inHeight, int const inBeta, double const inH, double * const inOutD, double * const inOutE)
 {
+    int retVal = -1;
     double const fDelta = ((double)inBeta)/((double)(inHeight-1)),
         betaHalve = ((double)inBeta)/2.0,
         ceilingToEye = CEILING_HEIGHT-inH*CEILING_HEIGHT;
@@ -33,6 +34,11 @@ static void fillDAndE(int const inHeight, int const inBeta, double const inH, do
             {
                 inOutE[y] = inH/sin(delta);
                 inOutD[y] = inOutE[y]*cos(delta);
+                
+                if(retVal<0)
+                {
+                    retVal = y;
+                }
             }
             else
             {
@@ -43,6 +49,9 @@ static void fillDAndE(int const inHeight, int const inBeta, double const inH, do
             }
         }
     }
+    
+    assert(retVal>0);
+    return retVal;
 }
 
 static void fillEpsilon(int const inWidth, int const inAlpha, double * const inOutEpsilon)
@@ -80,7 +89,7 @@ struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, int const inAlp
     assert(d!=NULL);
     double * const e = malloc(inHeight*sizeof *e);
     assert(e!=NULL);
-    fillDAndE(inHeight, inBeta, inH, d, e);
+    int const floorY = getFloorYAndFillDAndE(inHeight, inBeta, inH, d, e);
     
     double * const epsilon = malloc(inWidth*sizeof *epsilon);
     assert(epsilon!=NULL);
@@ -96,6 +105,7 @@ struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, int const inAlp
             
         .d = d,
         .e = e,
+        .floorY = floorY,
             
         .epsilon = epsilon,
             

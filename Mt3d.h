@@ -32,6 +32,7 @@ struct Mt3d
     
     double const * const d; // One d value for each y value.
     double const * const e; // One e value for each y value.
+    int const floorY; // First y value that has "an e" reaching the floor and not the ceiling.
     
     double const * const epsilon; // One epsilon angle (degrees) for each x value subtracted from halve of alpha angle (degrees).
     
