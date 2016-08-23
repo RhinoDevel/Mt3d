@@ -15,6 +15,13 @@ struct Map
     int const width;
     int const height;
     
+    // Player's start position:
+    //
+    double const posX;
+    double const posY;
+    
+    double const gamma; // Player's start direction of view (angle in degrees).
+    
     unsigned char const * const cells;
 };
 

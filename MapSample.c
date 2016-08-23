@@ -11,6 +11,11 @@
 static int const WIDTH = 48;
 static int const HEIGHT = 32;
 
+static double const POS_X = 6.0;
+static double const POS_Y = 16.0;
+
+static double const GAMMA = 0.0;
+
 static void fillCells(struct Map * const inOutMap)
 {
     unsigned char * const cells = (unsigned char *)(inOutMap->cells);
@@ -48,6 +53,11 @@ struct Map * MapSample_create()
         .width = WIDTH,
         .height = HEIGHT,
         
+        .posX = POS_X,
+        .posY = POS_Y,
+            
+        .gamma = GAMMA,
+            
         .cells = cells
     };
     

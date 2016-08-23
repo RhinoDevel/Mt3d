@@ -12,6 +12,8 @@ void Map_set(struct Map * const inOutObj, int const inRow, int const inCol, enum
     assert(inOutObj->cells!=NULL);
     assert(inOutObj->height>inRow);
     assert(inOutObj->width>inCol);
+    assert((int)inOutObj->posX!=inCol);
+    assert((int)inOutObj->posY!=inRow);
     
     ((unsigned char *)inOutObj->cells)[inRow*inOutObj->width+inCol] = (unsigned char)inType;
 }

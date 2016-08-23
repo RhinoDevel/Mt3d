@@ -19,6 +19,9 @@ int main()
     struct Mt3d * const o = Mt3d_create(WIDTH, HEIGHT, ALPHA, BETA, H);
     
     o->map = MapSample_create();
+    o->posX = o->map->posX;
+    o->posY = o->map->posY;
+    o->gamma = o->map->gamma;
     
     Map_delete(o->map);
     o->map = NULL;
