@@ -7,7 +7,7 @@ CC=gcc
 CFLAGS=-c -g -std=gnu11 -Wall
 #LDFLAGS=
 LDFLAGS=-g -lm
-SOURCES=main.c Mt3d.c
+SOURCES=main.c Mt3d.c Map.c MapSample.c
 OBJECTS=$(SOURCES:.c=.o)
 EXECUTABLE=mt3d
 

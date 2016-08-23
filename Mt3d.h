@@ -4,12 +4,12 @@
 #ifndef MT_3D
 #define MT_3D
 
-// Add includes here.
+#include "Map.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-    
+
 struct Mt3d
 {
     // ***********************
@@ -46,6 +46,8 @@ struct Mt3d
     double posY;
     
     double gamma; // Angle (degrees) telling the player's view direction.
+    
+    struct Map * map; // Does NOT take ownership.
 };
 
 void Mt3d_delete(struct Mt3d * const inObj);

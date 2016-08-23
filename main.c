@@ -6,6 +6,7 @@
 #include <stdlib.h>
 
 #include "Mt3d.h"
+#include "MapSample.h"
 
 static int const WIDTH = 300;
 static int const HEIGHT = 200;
@@ -17,6 +18,10 @@ int main()
 {
     struct Mt3d * const o = Mt3d_create(WIDTH, HEIGHT, ALPHA, BETA, H);
     
+    o->map = MapSample_create();
+    
+    Map_delete(o->map);
+    o->map = NULL;
     Mt3d_delete(o);
     return EXIT_SUCCESS;
 }

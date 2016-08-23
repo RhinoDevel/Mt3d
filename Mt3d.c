@@ -68,6 +68,8 @@ void Mt3d_delete(struct Mt3d * const inObj)
 {
     assert(inObj!=NULL);
     
+    assert(inObj->map==NULL); // No ownership of map.
+    
     assert(inObj->d!=NULL);
     free((double*)(inObj->d));
     
@@ -111,7 +113,8 @@ struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, int const inAlp
             
         .posX = 0.0,
         .posY = 0.0,
-        .gamma = 0.0
+        .gamma = 0.0,
+        .map = NULL
     };
 
     memcpy(retVal, &buf, sizeof *retVal);
