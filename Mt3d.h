@@ -48,6 +48,7 @@ struct Mt3d
     double gamma; // Angle (degrees) telling the player's view direction.
     
     struct Map * map; // Does NOT take ownership.
+    unsigned char * pixels; // Does NOT take ownership.
 };
 
 void Mt3d_delete(struct Mt3d * const inObj);
