@@ -25,6 +25,8 @@ struct Map
     unsigned char const * const cells;
 };
 
+void Map_print(struct Map const * const inOutObj, int const * const inPlayerX, int const * const inPlayerY);
+
 void Map_set(struct Map * const inOutObj, int const inRow, int const inCol, enum CellType const inType);
 
 void Map_delete(struct Map * const inObj);
