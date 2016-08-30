@@ -12,7 +12,7 @@ static int const WIDTH = 48;
 static int const HEIGHT = 32;
 
 static double const POS_X = 6.0;
-static double const POS_Y = 16.0;
+static double const POS_Y = 16.5;
 
 static double const GAMMA = 0.0;
 
@@ -22,7 +22,7 @@ static void fillCells(struct Map * const inOutMap)
     
     for(int row = 0, col = 0;row<HEIGHT;++row)
     {
-        unsigned char * const rowPtr = cells+row*HEIGHT;
+        unsigned char * const rowPtr = cells+row*WIDTH;
         
         for(col = 0;col<WIDTH;++col)
         {
