@@ -35,6 +35,9 @@ void Map_print(struct Map const * const inOutObj, int const * const inPlayerX, i
                     case CellType_floor_default:
                         c = '.';
                         break;
+                    case CellType_floor_exit:
+                        c = 'E';
+                        break;
 
                     default:
                         assert(false);
