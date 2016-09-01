@@ -8,13 +8,13 @@
 #include "CellType.h"
 #include "MapSample.h"
 
-static int const WIDTH = 48;
-static int const HEIGHT = 32;
+static int const WIDTH = 8;
+static int const HEIGHT = 8;
 
-static double const POS_X = 6.0;
-static double const POS_Y = 16.5;
+static double const POS_X = 4.0;
+static double const POS_Y = 4.0;
 
-static double const GAMMA = 0.0;
+static double const GAMMA = 90.0;
 
 static void fillCells(struct Map * const inOutMap)
 {
@@ -37,7 +37,8 @@ static void fillCells(struct Map * const inOutMap)
         }
     }
     
-    Map_set(inOutMap, HEIGHT/2, WIDTH/2, CellType_block_default);
+    //Map_set(inOutMap, HEIGHT/2, WIDTH/2, CellType_block_default);
+    Map_set(inOutMap, HEIGHT/2-1, WIDTH/2-1, CellType_floor_exit);
 }
 
 struct Map * MapSample_create()
