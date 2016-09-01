@@ -62,7 +62,7 @@ void Bmp_write(int const inWidth, int const inHeight, unsigned char const * cons
     
     bmp->bmpInfoHeader.dibHeaderSize =sizeof bmp->bmpInfoHeader;
     bmp->bmpInfoHeader.width = inWidth;
-    bmp->bmpInfoHeader.height = inHeight;
+    bmp->bmpInfoHeader.height = -inHeight; // HARD-CODED top to bottom pixel order by negation!
     bmp->bmpInfoHeader.planes = PLANES;
     bmp->bmpInfoHeader.bitsPerPixel = BITS_PER_PIXEL;
     bmp->bmpInfoHeader.compression = COMPRESSION;
