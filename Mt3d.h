@@ -34,7 +34,7 @@ struct Mt3d
     double const * const e; // One e value for each y value.
     int const floorY; // First y value that has "an e" reaching the floor and not the ceiling.
     
-    double const * const epsilon; // One epsilon angle (degrees) for each x value subtracted from halve of alpha angle (degrees).
+    double const * const eta; // One epsilon angle (degrees) for each x value subtracted from halve of alpha angle (degrees).
     
     // **********************
     // *** CURRENT VALUES ***
@@ -51,6 +51,7 @@ struct Mt3d
     unsigned char * pixels; // Does NOT take ownership.
 };
 
+void Mt3d_draw(struct Mt3d * const inObj);
 void Mt3d_delete(struct Mt3d * const inObj);
 struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, int const inAlpha, int const inBeta, double const inH);
 
