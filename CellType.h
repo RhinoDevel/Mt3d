@@ -11,7 +11,8 @@ extern "C" {
 enum CellType
 {
     CellType_floor_default = 1,
-    CellType_block_default = 2
+    CellType_block_default = 2,
+    CellType_floor_exit = 3
 };
     
 #ifdef __cplusplus
