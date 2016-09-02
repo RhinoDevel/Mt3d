@@ -3,6 +3,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <assert.h>
 #include <math.h>
 #include <stdbool.h>
@@ -132,7 +133,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
     
     for(int y = 0;y<inObj->height;++y)
     {
-        unsigned char * const rowPtr = inObj->pixels+y*inObj->width*3;
+        uint32_t * const rowPix = (uint32_t*)inObj->pixels+y*inObj->width;
         
         for(x = 0;x<inObj->width;++x)
         {   
@@ -150,6 +151,8 @@ void Mt3d_draw(struct Mt3d * const inObj)
                 dCellY = -1;
             bool done = false;
 
+            uint8_t * const colPix = (uint8_t*)(rowPix+x);
+            
 //            if(x==27 && y==13)
 //            {
 //                Deb_line("HERE")
@@ -252,15 +255,15 @@ void Mt3d_draw(struct Mt3d * const inObj)
             {
                 if(y<inObj->floorY)
                 {
-                    rowPtr[3*x+2] = 0;
-                    rowPtr[3*x+1] = 0;
-                    rowPtr[3*x] = 0xFF;
+                    colPix[2] = 0;
+                    colPix[1] = 0;
+                    colPix[0] = 0xFF;
                 }
                 else
                 {
-                    rowPtr[3*x+2] = 0;
-                    rowPtr[3*x+1] = 0xFF;
-                    rowPtr[3*x] = 0;
+                    colPix[2] = 0;
+                    colPix[1] = 0xFF;
+                    colPix[0] = 0;
                     
                     // MT_TODO: TEST: Add exit!
                 }
@@ -313,36 +316,36 @@ void Mt3d_draw(struct Mt3d * const inObj)
                             switch((enum CellType)inObj->map->cells[cellY*inObj->map->width+cellX])
                             {
                                 case CellType_block_default:
-                                    rowPtr[3*x+2] = 0xFF;
-                                    rowPtr[3*x+1] = 0;
-                                    rowPtr[3*x] = 0;
+                                    colPix[2] = 0xFF;
+                                    colPix[1] = 0;
+                                    colPix[0] = 0;
                                     break;
                                 case CellType_floor_default:
                                     if(y<inObj->floorY)
                                     {
-                                        rowPtr[3*x+2] = 0;
-                                        rowPtr[3*x+1] = 0;
-                                        rowPtr[3*x] = 0xFF;
+                                        colPix[2] = 0;
+                                        colPix[1] = 0;
+                                        colPix[0] = 0xFF;
                                     }
                                     else
                                     {
-                                        rowPtr[3*x+2] = 0;
-                                        rowPtr[3*x+1] = 0xFF;
-                                        rowPtr[3*x] = 0;
+                                        colPix[2] = 0;
+                                        colPix[1] = 0xFF;
+                                        colPix[0] = 0;
                                     }
                                     break;
                                 case CellType_floor_exit:
                                     if(y<inObj->floorY)
                                     {
-                                        rowPtr[3*x+2] = 0;
-                                        rowPtr[3*x+1] = 0;
-                                        rowPtr[3*x] = 0xFF;
+                                        colPix[2] = 0;
+                                        colPix[1] = 0;
+                                        colPix[0] = 0xFF;
                                     }
                                     else
                                     {
-                                        rowPtr[3*x+2] = 0;
-                                        rowPtr[3*x+1] = 0xFF;
-                                        rowPtr[3*x] = 0xFF;   
+                                        colPix[2] = 0;
+                                        colPix[1] = 0xFF;
+                                        colPix[0] = 0xFF;   
                                     }
                                     break;
 
@@ -360,9 +363,9 @@ void Mt3d_draw(struct Mt3d * const inObj)
                         {
                             Deb_line("x = %d, y = %d, zeta[x] = %f, sector[x] = %d, cellX = %d, cellY = %d.", x, y, zeta[x], sector[x], cellX, cellY)
                                 
-                            rowPtr[3*x+2] = 0xFF;
-                            rowPtr[3*x+1] = 0xFF;
-                            rowPtr[3*x] = 0;
+                            colPix[2] = 0xFF;
+                            colPix[1] = 0xFF;
+                            colPix[0] = 0;
                             done = true;
                         }
                         else
@@ -370,9 +373,9 @@ void Mt3d_draw(struct Mt3d * const inObj)
                             switch((enum CellType)inObj->map->cells[cellY*inObj->map->width+cellX])
                             {
                                 case CellType_block_default:
-                                    rowPtr[3*x+2] = 0xFF;
-                                    rowPtr[3*x+1] = 0;
-                                    rowPtr[3*x] = 0;
+                                    colPix[2] = 0xFF;
+                                    colPix[1] = 0;
+                                    colPix[0] = 0;
                                     done = true;
                                     break;
                                 case CellType_floor_default:

@@ -3,71 +3,65 @@
 
 //NDEBUG
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <assert.h>
 
 #include "Mt3d.h"
 #include "MapSample.h"
-#include "Bmp.h"
 #include "Sys.h"
 
-static int const WIDTH = 320;
-static int const HEIGHT = 200;
+#include <cairo/cairo.h>
+#include <gtk/gtk.h>
+#include <gdk/gdkkeysyms.h>
+
+static int const WIDTH = 800;
+static int const HEIGHT = 600;
 static int const ALPHA = 64;
 static int const BETA = 40;
 static double const H = 0.3;
 
-int main()
+static struct Mt3d * o = NULL;
+
+static struct 
 {
-    struct Mt3d * const o = Mt3d_create(WIDTH, HEIGHT, ALPHA, BETA, H);
+  GtkWidget* darea;
+  cairo_surface_t* image;  
+} glob;
+
+static void do_drawing(cairo_t* cr)
+{
+  cairo_set_source_surface(cr, glob.image, 0, 0);
+  cairo_paint(cr);    
+}
+
+static gboolean on_draw_event(GtkWidget* widget, cairo_t* cr, gpointer user_data)
+{      
+  do_drawing(cr);
+
+  return FALSE;
+}
+
+gboolean on_key_press (GtkWidget *widget, GdkEventKey *event, gpointer user_data)
+{
+    gboolean retVal = FALSE;
     
-    o->map = MapSample_create();
-    o->pixels = malloc(WIDTH*HEIGHT*3*sizeof *(o->pixels));
-    assert(o->pixels!=NULL);
-    o->posX = o->map->posX;
-    o->posY = o->map->posY;
-    o->gamma = o->map->gamma;
-
-    for(int row = 0, col = 0;row<HEIGHT;++row)
+    switch (event->keyval)
     {
-        unsigned char * const rowPtr = o->pixels+row*WIDTH*3; 
+        case GDK_KEY_a:
+            o->gamma = o->gamma+13.0;
+            retVal = TRUE;
+            break;
+        case GDK_KEY_d:
+            o->gamma = o->gamma-13.0;
+            retVal = TRUE;
+            break;
 
-        for(col = 0;col<3*WIDTH;col+=3)
-        {
-            rowPtr[col+0] = 0xFF; // Blue
-            rowPtr[col+1] = 0x00; // Green
-            rowPtr[col+2] = 0xFF; // Red
-        }
+        default:
+            break;
     }
-    
-    bool exit = false;
-    do
+    if(retVal==TRUE)
     {
-        Mt3d_draw(o);
-    
-        int const playerX = (int)o->posX,
-            playerY = (int)o->posY;
-        Map_print(o->map, &playerX, &playerY);
-        Bmp_write(WIDTH, HEIGHT, o->pixels, "out.bmp");
-        
-        char * const input = Sys_get_stdin();
-        switch(input[0])
-        {
-            case 'a':
-                o->gamma = o->gamma+23.0;
-                break;
-            case 's':
-                break;
-            case 'd':
-                o->gamma = o->gamma-23.0;
-                break;
-            case 'w':
-                break;
-            
-            default:
-                exit = true;
-                break;
-        }
         if(o->gamma<0.0)
         {
             o->gamma = 360.0+o->gamma;
@@ -79,7 +73,67 @@ int main()
                 o->gamma -= 360.0;
             }
         }
-    }while(!exit);
+        
+        cairo_surface_flush (glob.image);
+        Mt3d_draw(o);
+        cairo_surface_mark_dirty(glob.image);
+        gtk_widget_queue_draw(glob.darea);
+
+        int const playerX = (int)o->posX,
+            playerY = (int)o->posY;
+
+        Map_print(o->map, &playerX, &playerY);
+    }
+
+    return retVal; 
+}
+
+int main(int argc, char *argv[])
+{    
+    o = Mt3d_create(WIDTH, HEIGHT, ALPHA, BETA, H);
+    
+    o->map = MapSample_create();
+    assert(sizeof *o->pixels==1);
+    o->pixels = malloc(WIDTH*HEIGHT*4*sizeof *o->pixels);
+    assert(o->pixels!=NULL);
+    o->posX = o->map->posX;
+    o->posY = o->map->posY;
+    o->gamma = o->map->gamma;
+
+    for(int row = 0, col = 0;row<HEIGHT;++row)
+    {
+        uint32_t * const rowPix = ((uint32_t*)o->pixels)+row*WIDTH;
+
+        for(col = 0;col<WIDTH;++col)
+        {
+            uint8_t * const colPix = (uint8_t*)(rowPix+col);
+
+            colPix[0] = 0xFF; // Blue
+            colPix[1] = 0x0; // Green
+            colPix[2] = 0xFF; // Red
+            //colPix[3] = 0xFF; // (unused)
+        }
+    }
+    
+    GtkWidget* window;
+    int const stride = cairo_format_stride_for_width(CAIRO_FORMAT_RGB24, WIDTH);
+    assert(stride>0);
+    assert(stride==WIDTH*4);
+    glob.image = cairo_image_surface_create_for_data (o->pixels, CAIRO_FORMAT_RGB24, WIDTH, HEIGHT, stride);
+    gtk_init(&argc, &argv);
+
+    window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    glob.darea = gtk_drawing_area_new();
+    gtk_container_add(GTK_CONTAINER (window), glob.darea);
+    g_signal_connect(G_OBJECT(glob.darea), "draw", G_CALLBACK(on_draw_event), NULL); 
+    g_signal_connect(window, "destroy", G_CALLBACK (gtk_main_quit), NULL);
+    g_signal_connect (G_OBJECT (window), "key_press_event", G_CALLBACK (on_key_press), NULL);
+    gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
+    gtk_window_set_default_size(GTK_WINDOW(window), WIDTH+30, HEIGHT+30); 
+    gtk_window_set_title(GTK_WINDOW(window), "MT 3D");
+    gtk_widget_show_all(window);
+    gtk_main();
+    cairo_surface_destroy(glob.image);
     
     Map_delete(o->map);
     o->map = NULL;
