@@ -150,7 +150,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
                 dCellY = -1;
             bool done = false;
 
-//            if(x==160 && y==0)
+//            if(x==27 && y==13)
 //            {
 //                Deb_line("HERE")
 //            }
@@ -277,19 +277,19 @@ void Mt3d_draw(struct Mt3d * const inObj)
                     
                     if(addX==1)
                     {
-                        nextY = ((hitX>((double)(xForHit-1)-0.002))&&(hitX<((double)(xForHit)+0.002)));
+                        nextY = ((hitX>((double)(xForHit-1)-0.0001))&&(hitX<((double)(xForHit)+0.0001)));
                     }
                     else
                     {
-                        nextY = ((hitX<((double)(xForHit+1)+0.002))&&(hitX>((double)(xForHit)-0.002)));
+                        nextY = ((hitX<((double)(xForHit+1)+0.0001))&&(hitX>((double)(xForHit)-0.0001)));
                     }
                     if(addY==1)
                     {
-                        nextX = ((hitY>((double)(yForHit-1)-0.002))&&(hitY<((double)(yForHit)+0.002)));
+                        nextX = ((hitY>((double)(yForHit-1)-0.0001))&&(hitY<((double)(yForHit)+0.0001)));
                     }
                     else
                     {
-                        nextX = ((hitY<((double)(yForHit+1)+0.002))&&(hitY>((double)(yForHit)-0.002)));
+                        nextX = ((hitY<((double)(yForHit+1)+0.0001))&&(hitY>((double)(yForHit)-0.0001)));
                     }
 
                     assert(nextY||nextX);
