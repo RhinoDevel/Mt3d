@@ -20,7 +20,7 @@ extern "C" {
  * 
  * * May NOT support all kinds of triangles, function should work for triangles with angles Alpha and Beta having less than 90 degrees.
  */
-double getTriangleSideA(double const inGammaRad, double const inCleftOfAltitudeC, double const inCrightOfAltitudeC);
+double Calc_getTriangleSideA(double const inGammaRad, double const inCleftOfAltitudeC, double const inCrightOfAltitudeC);
 
 #ifdef __cplusplus
 }

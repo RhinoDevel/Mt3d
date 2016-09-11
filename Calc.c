@@ -5,7 +5,7 @@
 
 #include "Calc.h"
 
-double getTriangleSideA(double const inGammaRad, double const inCleftOfAltitudeC, double const inCrightOfAltitudeC)
+double Calc_getTriangleSideA(double const inGammaRad, double const inCleftOfAltitudeC, double const inCrightOfAltitudeC)
 {
     double const c = inCleftOfAltitudeC+inCrightOfAltitudeC, // Full length of side c.
         
