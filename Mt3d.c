@@ -11,38 +11,108 @@
 #include "Deb.h"
 #include "Mt3d.h"
 #include "Sys.h"
+#include "Calc.h"
 
 //#define MT_DOUBLE_TO_INT_ROUND(x) ((int)(((x)<0.0)?((x)-0.5):((x)+0.5)))
 
 static const double EQUAL_D_AND_E = 0.0;
 static const double CEILING_HEIGHT = 1.0;
 
+//static int getFloorYAndFillDAndE(int const inHeight, int const inBeta, double const inH, double * const inOutD, double * const inOutE)
+//{
+//    int retVal = -1;
+//    double const fDelta = ((double)inBeta)/((double)(inHeight-1)),
+//        betaHalve = ((double)inBeta)/2.0,
+//        ceilingToEye = CEILING_HEIGHT-inH*CEILING_HEIGHT;
+//    
+//    assert((inBeta>=0.0)&&(inBeta<360.0));
+//    
+//    for(int y = 0;y<inHeight;++y)
+//    {
+//        double const delta = fDelta*(double)y;
+//        
+//        assert((delta>=0.0)&&(delta<360.0));
+//        
+//        if(delta<betaHalve)
+//        {
+//            inOutE[y] = ceilingToEye/sin((betaHalve-delta)*M_PI/180.0);
+//            inOutD[y] = inOutE[y]*cos((betaHalve-delta)*M_PI/180.0);
+//        }
+//        else
+//        {
+//            if(delta>betaHalve)
+//            {
+//                inOutE[y] = inH/sin((delta-betaHalve)*M_PI/180.0);
+//                inOutD[y] = inOutE[y]*cos((delta-betaHalve)*M_PI/180.0);
+//                
+//                if(retVal<0)
+//                {
+//                    retVal = y;
+//                }
+//            }
+//            else
+//            {
+//                inOutD[y] = EQUAL_D_AND_E;
+//                inOutE[y] = EQUAL_D_AND_E;
+//                
+//                Deb_line("Warning: Delta to use for y value %d exactly equals halve of beta %d!", y, inBeta)
+//            }
+//        }
+//        
+//        //Deb_line("delta = %f, inOutE[%d] = %f, inOutD[%d] = %f.", delta, y, inOutE[y], y, inOutD[y])
+//    }
+//    
+//    assert(retVal>0);
+//    return retVal;
+//}
+//
 static int getFloorYAndFillDAndE(int const inHeight, int const inBeta, double const inH, double * const inOutD, double * const inOutE)
 {
     int retVal = -1;
-    double const fDelta = ((double)inBeta)/((double)(inHeight-1)),
-        betaHalve = ((double)inBeta)/2.0,
-        ceilingToEye = CEILING_HEIGHT-inH*CEILING_HEIGHT;
+    
+    // No support for anything else implemented, yet (and probably never needed):
+    //
+    assert(CEILING_HEIGHT==1.0);
     
     assert((inBeta>=0.0)&&(inBeta<360.0));
+    assert(inH>0.0 && inH<1.0);
     
+    double const lastPos = (double)(inHeight-1),
+        bottomOpposite = lastPos*inH,
+        topOpposite = lastPos-bottomOpposite,
+        zeroE = Calc_getTriangleSideA(inBeta*M_PI/180.0, bottomOpposite, topOpposite),
+        betaTop = asin(topOpposite/zeroE),
+        a = topOpposite/tan(betaTop);
+     
     for(int y = 0;y<inHeight;++y)
     {
-        double const delta = fDelta*(double)y;
+        double const dY = (double)y;
+        double delta = 0.0;
         
-        assert((delta>=0.0)&&(delta<360.0));
-        
-        if(delta<betaHalve)
+        if(dY<topOpposite)
         {
-            inOutE[y] = ceilingToEye/sin((betaHalve-delta)*M_PI/180.0);
-            inOutD[y] = inOutE[y]*cos((betaHalve-delta)*M_PI/180.0);
+            delta = betaTop-atan((topOpposite-dY)/a);
         }
         else
         {
-            if(delta>betaHalve)
+            assert(dY<=lastPos);
+            delta = betaTop+atan((dY-topOpposite)/a);
+        }
+        assert(delta>=0.0 && delta<2.0*M_PI);
+        
+        if(delta<betaTop)
+        {
+            assert(dY<topOpposite);
+            inOutE[y] = topOpposite/sin(betaTop-delta);
+            inOutD[y] = inOutE[y]*cos(betaTop-delta);
+        }
+        else
+        {
+            if(delta>betaTop)
             {
-                inOutE[y] = inH/sin((delta-betaHalve)*M_PI/180.0);
-                inOutD[y] = inOutE[y]*cos((delta-betaHalve)*M_PI/180.0);
+                assert(dY>topOpposite);
+                inOutE[y] = inH/sin(delta-betaTop);
+                inOutD[y] = inOutE[y]*cos(delta-betaTop);
                 
                 if(retVal<0)
                 {
@@ -51,14 +121,15 @@ static int getFloorYAndFillDAndE(int const inHeight, int const inBeta, double co
             }
             else
             {
+                assert(dY==topOpposite);
                 inOutD[y] = EQUAL_D_AND_E;
                 inOutE[y] = EQUAL_D_AND_E;
                 
-                Deb_line("Warning: Delta to use for y value %d exactly equals halve of beta %d!", y, inBeta)
+                Deb_line("Warning: Delta %f to use for y value %d exactly equals top part %f of beta %d!", delta*180.0/M_PI, y, betaTop*180.0/M_PI, inBeta)
             }
         }
         
-        //Deb_line("delta = %f, inOutE[%d] = %f, inOutD[%d] = %f.", delta, y, inOutE[y], y, inOutD[y])
+        Deb_line("delta = %f, inOutE[%d] = %f, inOutD[%d] = %f.", delta*180.0/M_PI, y, inOutE[y], y, inOutD[y])
     }
     
     assert(retVal>0);
