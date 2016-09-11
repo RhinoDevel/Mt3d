@@ -80,8 +80,8 @@ static int getFloorYAndFillDAndE(int const inHeight, int const inBeta, double co
     double const lastPos = (double)(inHeight-1),
         bottomOpposite = lastPos*inH,
         topOpposite = lastPos-bottomOpposite,
-        zeroE = Calc_getTriangleSideA(inBeta*M_PI/180.0, bottomOpposite, topOpposite),
-        betaTop = asin(topOpposite/zeroE),
+        topHypotenuse = Calc_getTriangleSideA(inBeta*M_PI/180.0, bottomOpposite, topOpposite),
+        betaTop = asin(topOpposite/topHypotenuse),
         a = topOpposite/tan(betaTop);
      
     for(int y = 0;y<inHeight;++y)
@@ -98,7 +98,6 @@ static int getFloorYAndFillDAndE(int const inHeight, int const inBeta, double co
             assert(dY<=lastPos);
             delta = betaTop+atan((dY-topOpposite)/a);
         }
-        assert(delta>=0.0 && delta<2.0*M_PI);
         
         if(delta<betaTop)
         {
