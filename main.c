@@ -15,8 +15,8 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 
-static int const WIDTH = 800;
-static int const HEIGHT = 600;
+static int const WIDTH = 1280;
+static int const HEIGHT = 960;
 static int const ALPHA = 64;
 static int const BETA = 40;
 static double const H = 0.3;
@@ -42,7 +42,7 @@ static gboolean on_draw_event(GtkWidget* widget, cairo_t* cr, gpointer user_data
   return FALSE;
 }
 
-gboolean on_key_press (GtkWidget *widget, GdkEventKey *event, gpointer user_data)
+gboolean on_key_press(GtkWidget* widget, GdkEventKey* event, gpointer user_data)
 {
     gboolean retVal = FALSE;
     
