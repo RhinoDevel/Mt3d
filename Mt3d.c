@@ -59,7 +59,7 @@ static const double CEILING_HEIGHT = 1.0;
 //            }
 //        }
 //        
-//        //Deb_line("delta = %f, inOutE[%d] = %f, inOutD[%d] = %f.", delta, y, inOutE[y], y, inOutD[y])
+//        Deb_line("delta = %f, inOutE[%d] = %f, inOutD[%d] = %f.", delta, y, inOutE[y], y, inOutD[y])
 //    }
 //    
 //    assert(retVal>0);
@@ -77,7 +77,8 @@ static int getFloorYAndFillDAndE(int const inHeight, int const inBeta, double co
     assert((inBeta>=0.0)&&(inBeta<360.0));
     assert(inH>0.0 && inH<1.0);
     
-    double const lastPos = (double)(inHeight-1),
+    double const ceilingToEye = CEILING_HEIGHT-inH*CEILING_HEIGHT,
+        lastPos = (double)(inHeight-1),
         bottomOpposite = lastPos*inH,
         topOpposite = lastPos-bottomOpposite,
         topHypotenuse = Calc_getTriangleSideA(inBeta*M_PI/180.0, bottomOpposite, topOpposite),
@@ -102,7 +103,7 @@ static int getFloorYAndFillDAndE(int const inHeight, int const inBeta, double co
         if(delta<betaTop)
         {
             assert(dY<topOpposite);
-            inOutE[y] = topOpposite/sin(betaTop-delta);
+            inOutE[y] = ceilingToEye/sin(betaTop-delta);
             inOutD[y] = inOutE[y]*cos(betaTop-delta);
         }
         else
