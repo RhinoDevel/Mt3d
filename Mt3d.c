@@ -18,11 +18,11 @@
 static const double EQUAL_D_AND_E = 0.0;
 static const double CEILING_HEIGHT = 1.0;
 
-//static int getFloorYAndFillDAndE(int const inHeight, int const inBeta, double const inH, double * const inOutD, double * const inOutE)
+//static int getFloorYAndFillDAndE(int const inHeight, double const inBeta, double const inH, double * const inOutD, double * const inOutE)
 //{
 //    int retVal = -1;
 //    double const fDelta = ((double)inBeta)/((double)(inHeight-1)),
-//        betaHalve = ((double)inBeta)/2.0,
+//        betaHalve = inBeta/2.0,
 //        ceilingToEye = CEILING_HEIGHT-inH*CEILING_HEIGHT;
 //    
 //    assert((inBeta>=0.0)&&(inBeta<360.0));
@@ -55,7 +55,7 @@ static const double CEILING_HEIGHT = 1.0;
 //                inOutD[y] = EQUAL_D_AND_E;
 //                inOutE[y] = EQUAL_D_AND_E;
 //                
-//                Deb_line("Warning: Delta to use for y value %d exactly equals halve of beta %d!", y, inBeta)
+//                Deb_line("Warning: Delta to use for y value %d exactly equals halve of beta %f!", y, inBeta)
 //            }
 //        }
 //        
@@ -66,7 +66,7 @@ static const double CEILING_HEIGHT = 1.0;
 //    return retVal;
 //}
 //
-static int getFloorYAndFillDAndE(int const inHeight, int const inBeta, double const inH, double * const inOutD, double * const inOutE)
+static int getFloorYAndFillDAndE(int const inHeight, double const inBeta, double const inH, double * const inOutD, double * const inOutE)
 {
     int retVal = -1;
     
@@ -125,29 +125,74 @@ static int getFloorYAndFillDAndE(int const inHeight, int const inBeta, double co
                 inOutD[y] = EQUAL_D_AND_E;
                 inOutE[y] = EQUAL_D_AND_E;
                 
-                Deb_line("Warning: Delta %f to use for y value %d exactly equals top part %f of beta %d!", delta*180.0/M_PI, y, betaTop*180.0/M_PI, inBeta)
+                Deb_line("Warning: Delta %f to use for y value %d exactly equals top part %f of beta %f!", delta*180.0/M_PI, y, betaTop*180.0/M_PI, inBeta)
             }
         }
         
-        Deb_line("delta = %f, inOutE[%d] = %f, inOutD[%d] = %f.", delta*180.0/M_PI, y, inOutE[y], y, inOutD[y])
+        //Deb_line("delta = %f, inOutE[%d] = %f, inOutD[%d] = %f.", delta*180.0/M_PI, y, inOutE[y], y, inOutD[y])
     }
     
     assert(retVal>0);
     return retVal;
 }
 
+//static void fillEta(int const inWidth, int const inAlpha, double * const inOutEta)
+//{
+//    double const fEpsilon = ((double)inAlpha)/((double)(inWidth-1)),
+//        alphaHalve = ((double)inAlpha)/2.0;
+//    
+//    assert((inAlpha>=0.0)&&(inAlpha<360.0));
+//    
+//    for(int x = 0;x<inWidth;++x)
+//    {
+//        double const epsilon = fEpsilon*x; // Epsilon is the angle from pixel 0 = 0 degrees to pixel inWidth-1 = inAlpha degrees. 
+//        
+//        inOutEta[x] = alphaHalve-epsilon; // Eta is a pre-calculated angle to be used with player view angle, later.
+//        
+//        // Not necessary, here:
+//        //
+////        if(inOutEta[x]<0.0)
+////        {
+////            inOutEta[x] = 360.0+inOutEta[x];
+////        }
+////        else
+////        {
+////            if(inOutEta[x]>=360.0)
+////            {
+////                inOutEta[x] -= 360.0;
+////            }
+////        }
+////        assert((inOutEta[x]>=0)&&(inOutEta[x]<360.0));
+//        
+//        Deb_line("epsilon = %f, inOutEta[%d] = %f.", epsilon, x, inOutEta[x])
+//    }
+//}
+//
 static void fillEta(int const inWidth, int const inAlpha, double * const inOutEta)
 {
-    double const fEpsilon = ((double)inAlpha)/((double)(inWidth-1)),
-        alphaHalve = ((double)inAlpha)/2.0;
-    
     assert((inAlpha>=0.0)&&(inAlpha<360.0));
     
+    double const lastPos = (double)(inWidth-1),
+        opposite = lastPos*0.5,
+        alphaHalve = 0.5*inAlpha*M_PI/180.0,
+        a = opposite/tan(alphaHalve);
+
     for(int x = 0;x<inWidth;++x)
     {
-        double const epsilon = fEpsilon*x; // Epsilon is the angle from pixel 0 = 0 degrees to pixel inWidth-1 = inAlpha degrees. 
+        double const dX = (double)x;
+        double epsilon = 0.0; // Epsilon is the angle from pixel 0 = 0 degrees to pixel inWidth-1 = inAlpha degrees. 
         
-        inOutEta[x] = alphaHalve-epsilon; // Eta is a pre-calculated angle to be used with player view angle, later.
+        if(dX<opposite)
+        {
+            epsilon = alphaHalve-atan((opposite-dX)/a);
+        }
+        else
+        {
+            assert(dX<=lastPos);
+            epsilon = alphaHalve+atan((dX-opposite)/a);
+        }
+
+        inOutEta[x] = (alphaHalve-epsilon)*180.0/M_PI; // Eta is a pre-calculated angle to be used with player view angle, later.
         
         // Not necessary, here:
         //
@@ -164,7 +209,7 @@ static void fillEta(int const inWidth, int const inAlpha, double * const inOutEt
 //        }
 //        assert((inOutEta[x]>=0)&&(inOutEta[x]<360.0));
         
-        //Deb_line("epsilon = %f, inOutEta[%d] = %f.", epsilon, x, inOutEta[x])
+        //Deb_line("epsilon = %f, inOutEta[%d] = %f.", epsilon*180.0/M_PI, x, inOutEta[x])
     }
 }
 
@@ -487,7 +532,20 @@ void Mt3d_delete(struct Mt3d * const inObj)
     free(inObj);
 }
 
-struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, int const inAlpha, int const inBeta, double const inH)
+void Mt3d_update(int const inAlpha, double const inBeta, double const inH, struct Mt3d * const inOutObj)
+{
+    inOutObj->floorY = getFloorYAndFillDAndE(inOutObj->height, inBeta, inH, inOutObj->d, inOutObj->e);
+    
+    fillEta(inOutObj->width, inAlpha, inOutObj->eta);
+    
+    inOutObj->alpha = inAlpha;
+    inOutObj->beta = inBeta;
+    inOutObj->h = inH;
+    
+    Deb_line("Alpha = %d, beta = %f, h(-eight) = %f.", inAlpha, inBeta, inH)
+}
+
+struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, int const inAlpha, double const inBeta, double const inH)
 {
     struct Mt3d * const retVal = malloc(sizeof *retVal);
     assert(retVal!=NULL);
@@ -496,23 +554,21 @@ struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, int const inAlp
     assert(d!=NULL);
     double * const e = malloc(inHeight*sizeof *e);
     assert(e!=NULL);
-    int const floorY = getFloorYAndFillDAndE(inHeight, inBeta, inH, d, e);
     
     double * const eta = malloc(inWidth*sizeof *eta);
     assert(eta!=NULL);
-    fillEta(inWidth, inAlpha, eta);
     
     struct Mt3d const buf = (struct Mt3d)
     {
         .width = inWidth,
         .height = inHeight,
-        .alpha = inAlpha,
-        .beta = inBeta,
-        .h = inH,
+        .alpha = 0, // Invalidates
+        .beta = 0.0, // Invalidates
+        .h = 0.0, // Invalidates
             
         .d = d,
         .e = e,
-        .floorY = floorY,
+        .floorY = -1, // Invalidates
             
         .eta = eta,
             
@@ -525,5 +581,7 @@ struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, int const inAlp
 
     memcpy(retVal, &buf, sizeof *retVal);
 
+    Mt3d_update(inAlpha, inBeta, inH, retVal);
+    
     return retVal;
 }

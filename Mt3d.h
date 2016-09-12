@@ -21,20 +21,20 @@ struct Mt3d
     int const width;
     int const height;
     
-    int const alpha; // Horizontal range of view (degrees).
-    int const beta; // Vertical range of view (degrees).
+    int /*const*/ alpha; // Horizontal range of view (degrees).
+    double /*const*/ beta; // Vertical range of view (degrees).
     
-    double const h; // Height of players eye as fraction of ceiling height (which is 1.0).
+    double /*const*/ h; // Height of players eye as fraction of ceiling height (which is 1.0).
     
     // ****************************
     // *** CALCULATED CONSTANTS ***
     // ****************************
     
-    double const * const d; // One d value for each y value.
-    double const * const e; // One e value for each y value.
-    int const floorY; // First y value that has "an e" reaching the floor and not the ceiling.
+    double /*const*/ * const d; // One d value for each y value.
+    double /*const*/ * const e; // One e value for each y value.
+    int /*const*/ floorY; // First y value that has "an e" reaching the floor and not the ceiling.
     
-    double const * const eta; // One epsilon angle (degrees) for each x value subtracted from halve of alpha angle (degrees).
+    double /*const*/ * const eta; // One epsilon angle (degrees) for each x value subtracted from halve of alpha angle (degrees).
     
     // **********************
     // *** CURRENT VALUES ***
@@ -53,7 +53,8 @@ struct Mt3d
 
 void Mt3d_draw(struct Mt3d * const inObj);
 void Mt3d_delete(struct Mt3d * const inObj);
-struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, int const inAlpha, int const inBeta, double const inH);
+void Mt3d_update(int const inAlpha, double const inBeta, double const inH, struct Mt3d * const inOutObj);
+struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, int const inAlpha, double const inBeta, double const inH);
 
 #ifdef __cplusplus
 }

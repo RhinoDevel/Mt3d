@@ -5,6 +5,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <math.h>
 #include <assert.h>
 
 #include "Mt3d.h"
@@ -15,11 +16,16 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 
-static int const WIDTH = 1280;
-static int const HEIGHT = 960;
-static int const ALPHA = 64;
-static int const BETA = 40;
-static double const H = 0.3;
+static int const WIDTH = 640;
+static int const HEIGHT = 480;
+static int const ALPHA = 50;
+static int const ALPHA_MIN = 20;
+static int const ALPHA_MAX = 160;
+static int const ALPHA_STEP = 5;
+static double const H = 0.5;
+static double const H_MIN = 0.1;
+static double const H_MAX = 0.9;
+static double const H_STEP = 0.1;
 
 static struct Mt3d * o = NULL;
 
@@ -28,6 +34,11 @@ static struct
   GtkWidget* darea;
   cairo_surface_t* image;  
 } glob;
+
+static double getBeta(int const inAlpha)
+{
+    return (2*atan((double)HEIGHT*tan(((double)inAlpha/2.0)*M_PI/180.0)/(double)WIDTH))*180.0/M_PI;
+}
 
 static void do_drawing(cairo_t* cr)
 {
@@ -42,10 +53,10 @@ static gboolean on_draw_event(GtkWidget* widget, cairo_t* cr, gpointer user_data
   return FALSE;
 }
 
-gboolean on_key_press(GtkWidget* widget, GdkEventKey* event, gpointer user_data)
+static gboolean on_key_press(GtkWidget* widget, GdkEventKey* event, gpointer user_data)
 {
     gboolean retVal = FALSE;
-    
+
     switch (event->keyval)
     {
         case GDK_KEY_a:
@@ -56,7 +67,59 @@ gboolean on_key_press(GtkWidget* widget, GdkEventKey* event, gpointer user_data)
             o->gamma = o->gamma-13.0;
             retVal = TRUE;
             break;
-
+        case GDK_KEY_l:
+        {
+            double h = o->h+H_STEP;
+            
+            if(h>H_MAX)
+            {
+                h = H_MIN;
+            }
+            
+            Mt3d_update(o->alpha, o->beta, h, o);
+            retVal = TRUE;
+            break;
+        }
+        case GDK_KEY_k:
+         {
+            double h = o->h-H_STEP;
+            
+            if(h<H_MIN)
+            {
+                h = H_MAX;
+            }
+            
+            Mt3d_update(o->alpha, o->beta, h, o);
+            retVal = TRUE;
+            break;
+        }
+        case GDK_KEY_p:
+        {
+            int alpha = o->alpha+ALPHA_STEP;
+            
+            if(alpha>ALPHA_MAX)
+            {
+                alpha = ALPHA_MIN;
+            }
+            
+            Mt3d_update(alpha, getBeta(alpha), o->h, o);
+            retVal = TRUE;
+            break;
+        }
+        case GDK_KEY_o:
+        {
+            int alpha = o->alpha-ALPHA_STEP;
+            
+            if(alpha<ALPHA_MIN)
+            {
+                alpha = ALPHA_MAX;
+            }
+            
+            Mt3d_update(alpha, getBeta(alpha), o->h, o);
+            retVal = TRUE;
+            break;
+        }
+            
         default:
             break;
     }
@@ -81,7 +144,7 @@ gboolean on_key_press(GtkWidget* widget, GdkEventKey* event, gpointer user_data)
 
         int const playerX = (int)o->posX,
             playerY = (int)o->posY;
-
+        
         Map_print(o->map, &playerX, &playerY);
     }
 
@@ -89,8 +152,8 @@ gboolean on_key_press(GtkWidget* widget, GdkEventKey* event, gpointer user_data)
 }
 
 int main(int argc, char *argv[])
-{    
-    o = Mt3d_create(WIDTH, HEIGHT, ALPHA, BETA, H);
+{   
+    o = Mt3d_create(WIDTH, HEIGHT, ALPHA, getBeta(ALPHA), H);
     
     o->map = MapSample_create();
     assert(sizeof *o->pixels==1);
