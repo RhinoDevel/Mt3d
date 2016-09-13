@@ -16,13 +16,13 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 
-static int const WIDTH = 640;
-static int const HEIGHT = 480;
+static int const WIDTH = 800;
+static int const HEIGHT = 600;
 static int const ALPHA = 50;
 static int const ALPHA_MIN = 20;
 static int const ALPHA_MAX = 160;
 static int const ALPHA_STEP = 5;
-static double const H = 0.5;
+static double const H = 0.5; // As part of room height (e.g. 0.5 = 50% of room height).
 static double const H_MIN = 0.1;
 static double const H_MAX = 0.9;
 static double const H_STEP = 0.1;

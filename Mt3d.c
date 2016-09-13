@@ -16,7 +16,7 @@
 //#define MT_DOUBLE_TO_INT_ROUND(x) ((int)(((x)<0.0)?((x)-0.5):((x)+0.5)))
 
 static const double EQUAL_D_AND_E = 0.0;
-static const double CEILING_HEIGHT = 1.0;
+static const double CEILING_HEIGHT = 1.0; // 1.0 = Height equals length of one floor/ceiling cell.
 
 //static int getFloorYAndFillDAndE(int const inHeight, double const inBeta, double const inH, double * const inOutD, double * const inOutE)
 //{
@@ -70,20 +70,17 @@ static int getFloorYAndFillDAndE(int const inHeight, double const inBeta, double
 {
     int retVal = -1;
     
-    // No support for anything else implemented, yet (and probably never needed):
-    //
-    assert(CEILING_HEIGHT==1.0);
-    
     assert((inBeta>=0.0)&&(inBeta<360.0));
     assert(inH>0.0 && inH<1.0);
     
-    double const ceilingToEye = CEILING_HEIGHT-inH*CEILING_HEIGHT,
-        lastPos = (double)(inHeight-1),
-        bottomOpposite = lastPos*inH,
-        topOpposite = lastPos-bottomOpposite,
-        topHypotenuse = Calc_getTriangleSideA(inBeta*M_PI/180.0, bottomOpposite, topOpposite),
+    double const floorToEye = inH*CEILING_HEIGHT, // (cell lengths)
+        ceilingToEye = CEILING_HEIGHT-floorToEye, // (cell lengths)
+        lastPos = (double)(inHeight-1), // (pixels)
+        bottomOpposite = lastPos*inH, // (pixels)
+        topOpposite = lastPos-bottomOpposite, // (pixels)
+        topHypotenuse = Calc_getTriangleSideA(inBeta*M_PI/180.0, bottomOpposite, topOpposite), // (pixels)
         betaTop = asin(topOpposite/topHypotenuse),
-        a = topOpposite/tan(betaTop);
+        a = topOpposite/tan(betaTop); // (pixels)
      
     for(int y = 0;y<inHeight;++y)
     {
@@ -111,7 +108,7 @@ static int getFloorYAndFillDAndE(int const inHeight, double const inBeta, double
             if(delta>betaTop)
             {
                 assert(dY>topOpposite);
-                inOutE[y] = inH/sin(delta-betaTop);
+                inOutE[y] = floorToEye/sin(delta-betaTop);
                 inOutD[y] = inOutE[y]*cos(delta-betaTop);
                 
                 if(retVal<0)
@@ -129,7 +126,7 @@ static int getFloorYAndFillDAndE(int const inHeight, double const inBeta, double
             }
         }
         
-        //Deb_line("delta = %f, inOutE[%d] = %f, inOutD[%d] = %f.", delta*180.0/M_PI, y, inOutE[y], y, inOutD[y])
+        Deb_line("delta = %f, inOutE[%d] = %f cell lengths, inOutD[%d] = %f cell lengths.", delta*180.0/M_PI, y, inOutE[y], y, inOutD[y])
     }
     
     assert(retVal>0);
@@ -170,12 +167,12 @@ static int getFloorYAndFillDAndE(int const inHeight, double const inBeta, double
 //
 static void fillEta(int const inWidth, int const inAlpha, double * const inOutEta)
 {
-    assert((inAlpha>=0.0)&&(inAlpha<360.0));
+    assert((double)inAlpha>=0.0 && (double)inAlpha<360.0);
     
-    double const lastPos = (double)(inWidth-1),
-        opposite = lastPos*0.5,
-        alphaHalve = 0.5*inAlpha*M_PI/180.0,
-        a = opposite/tan(alphaHalve);
+    double const lastPos = (double)(inWidth-1), // (pixels)
+        opposite = lastPos*0.5, // (pixels)
+        alphaHalve = 0.5*(double)inAlpha*M_PI/180.0,
+        a = opposite/tan(alphaHalve); // (pixels)
 
     for(int x = 0;x<inWidth;++x)
     {

@@ -30,8 +30,8 @@ struct Mt3d
     // *** CALCULATED CONSTANTS ***
     // ****************************
     
-    double /*const*/ * const d; // One d value for each y value.
-    double /*const*/ * const e; // One e value for each y value.
+    double /*const*/ * const d; // One d value for each y value (cell lengths).
+    double /*const*/ * const e; // One e value for each y value (cell lengths).
     int /*const*/ floorY; // First y value that has "an e" reaching the floor and not the ceiling.
     
     double /*const*/ * const eta; // One epsilon angle (degrees) for each x value subtracted from halve of alpha angle (degrees).
