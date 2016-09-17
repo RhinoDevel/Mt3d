@@ -24,17 +24,17 @@ struct Mt3d
     int /*const*/ alpha; // Horizontal range of view (degrees).
     double /*const*/ beta; // Vertical range of view (degrees).
     
-    double /*const*/ h; // Height of players eye as fraction of ceiling height (which is 1.0).
+    double /*const*/ h; // Height of players eye as fraction of ceiling height (ceiling height is measured in cell lengths).
     
     // ****************************
     // *** CALCULATED CONSTANTS ***
     // ****************************
     
-    double /*const*/ * const d; // One d value for each y value (cell lengths).
-    double /*const*/ * const e; // One e value for each y value (cell lengths).
-    int /*const*/ floorY; // First y value that has "an e" reaching the floor and not the ceiling.
+    double /*const*/ * const d; // One d value for each (x,y) pixel coordinate (in cell lengths).
+    double /*const*/ * const e; // One e value for each (x,y) pixel coordinate (in cell lengths).
+    int /*const*/ * const floorY; // First y value that has "an e" reaching the floor and not the ceiling for each x.
     
-    double /*const*/ * const eta; // One epsilon angle (degrees) for each x value subtracted from halve of alpha angle (degrees).
+    double /*const*/ * const eta; // One value for each (x/y) pixel coordinate (in degrees).
     
     // **********************
     // *** CURRENT VALUES ***
