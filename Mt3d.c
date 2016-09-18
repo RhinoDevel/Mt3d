@@ -79,7 +79,7 @@ static void fill(
                 delta = betaTopX[x]-atan((yMiddle-dY)/aX[x]);
                 assert(delta<betaTopX[x]);
                 
-                inOutE[pos] = ceilingToEye/sin(betaTopX[x]-delta);
+                inOutE[pos] = ceilingToEye/sin(betaTopX[x]-delta); 
                 inOutD[pos] = inOutE[pos]*cos(betaTopX[x]-delta);
             }
             else
@@ -89,7 +89,7 @@ static void fill(
                 assert(delta>betaTopX[x]);
                 
                 inOutE[pos] = floorToEye/sin(delta-betaTopX[x]);
-                inOutD[pos] = inOutE[y]*cos(delta-betaTopX[x]);
+                inOutD[pos] = inOutE[pos]*cos(delta-betaTopX[x]);
 
                 if(inOutFloorY[x]==-1)
                 {
