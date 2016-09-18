@@ -11,6 +11,7 @@
 #include "Mt3d.h"
 #include "MapSample.h"
 #include "Sys.h"
+#include "Calc.h"
 
 #include <cairo/cairo.h>
 #include <gtk/gtk.h>
@@ -18,14 +19,15 @@
 
 static int const WIDTH = 800;
 static int const HEIGHT = 600;
-static int const ALPHA = 50;
-static int const ALPHA_MIN = 20;
-static int const ALPHA_MAX = 160;
-static int const ALPHA_STEP = 5;
+static double const ALPHA = CALC_TO_RAD(50.0);
+static double const ALPHA_MIN = CALC_TO_RAD(20.0);
+static double const ALPHA_MAX = CALC_TO_RAD(160.0);
+static double const ALPHA_STEP = CALC_TO_RAD(5.0);
 static double const H = 0.5; // As part of room height (e.g. 0.5 = 50% of room height).
 static double const H_MIN = 0.1;
 static double const H_MAX = 0.9;
 static double const H_STEP = 0.1;
+static double const GAMMA_STEP = CALC_TO_RAD(13.0);
 
 static struct Mt3d * o = NULL;
 
@@ -35,22 +37,21 @@ static struct
   cairo_surface_t* image;  
 } glob;
 
-static double getBeta(int const inAlpha)
+static double getBeta(double const inAlpha)
 {
-    return (2*atan((double)HEIGHT*tan(((double)inAlpha/2.0)*M_PI/180.0)/(double)WIDTH))*180.0/M_PI;
+    return 2.0*atan((double)HEIGHT*tan(inAlpha/2.0)/(double)WIDTH);
 }
 
 static void do_drawing(cairo_t* cr)
 {
-  cairo_set_source_surface(cr, glob.image, 0, 0);
-  cairo_paint(cr);    
+    cairo_set_source_surface(cr, glob.image, 0, 0);
+    cairo_paint(cr);    
 }
 
 static gboolean on_draw_event(GtkWidget* widget, cairo_t* cr, gpointer user_data)
 {      
-  do_drawing(cr);
-
-  return FALSE;
+    do_drawing(cr);
+    return FALSE;
 }
 
 static gboolean on_key_press(GtkWidget* widget, GdkEventKey* event, gpointer user_data)
@@ -60,13 +61,14 @@ static gboolean on_key_press(GtkWidget* widget, GdkEventKey* event, gpointer use
     switch (event->keyval)
     {
         case GDK_KEY_a:
-            o->gamma = o->gamma+13.0;
+            o->gamma = o->gamma+GAMMA_STEP;
             retVal = TRUE;
             break;
         case GDK_KEY_d:
-            o->gamma = o->gamma-13.0;
+            o->gamma = o->gamma-GAMMA_STEP;
             retVal = TRUE;
             break;
+            
         case GDK_KEY_l:
         {
             double h = o->h+H_STEP;
@@ -93,9 +95,10 @@ static gboolean on_key_press(GtkWidget* widget, GdkEventKey* event, gpointer use
             retVal = TRUE;
             break;
         }
+        
         case GDK_KEY_p:
         {
-            int alpha = o->alpha+ALPHA_STEP;
+            double alpha = o->alpha+ALPHA_STEP;
             
             if(alpha>ALPHA_MAX)
             {
@@ -108,7 +111,7 @@ static gboolean on_key_press(GtkWidget* widget, GdkEventKey* event, gpointer use
         }
         case GDK_KEY_o:
         {
-            int alpha = o->alpha-ALPHA_STEP;
+            double alpha = o->alpha-ALPHA_STEP;
             
             if(alpha<ALPHA_MIN)
             {
@@ -125,17 +128,7 @@ static gboolean on_key_press(GtkWidget* widget, GdkEventKey* event, gpointer use
     }
     if(retVal==TRUE)
     {
-        if(o->gamma<0.0)
-        {
-            o->gamma = 360.0+o->gamma;
-        }
-        else
-        {
-            if(o->gamma>=360.0)
-            {
-                o->gamma -= 360.0;
-            }
-        }
+        o->gamma = CALC_ANGLE_TO_POS(o->gamma);
         
         cairo_surface_flush (glob.image);
         Mt3d_draw(o);

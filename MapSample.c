@@ -7,6 +7,7 @@
 
 #include "CellType.h"
 #include "MapSample.h"
+#include "Calc.h"
 
 static int const WIDTH = 8;
 static int const HEIGHT = 8;
@@ -14,7 +15,7 @@ static int const HEIGHT = 8;
 static double const POS_X = 4.0;
 static double const POS_Y = 4.0;
 
-static double const GAMMA = 90.0;
+static double const GAMMA = CALC_TO_RAD(90.0);
 
 static void fillCells(struct Map * const inOutMap)
 {

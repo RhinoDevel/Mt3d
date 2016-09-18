@@ -20,7 +20,7 @@ static const double CEILING_HEIGHT = 1.0; // 1.0 = Height equals length of one f
 static void fill(
     int const inWidth,
     int const inHeight,
-    int const inAlpha,
+    double const inAlpha,
     double const inBeta,
     double const inH,
     double * const inOutD,
@@ -31,6 +31,7 @@ static void fill(
     int x = 0,
         y = 0;
     
+    assert(inBeta>0.0);
     assert(inHeight%2==0);
     assert(inWidth%2==0);
     
@@ -42,10 +43,8 @@ static void fill(
     
     double const yMiddle = (double)(inHeight-1)/2.0,
         xMiddle = (double)(inWidth-1)/2.0,
-        betaMiddle = (double)inBeta*M_PI/180.0,
-        alphaMiddle = (double)inAlpha*M_PI/180.0,
-        sYmiddle = xMiddle/sin(alphaMiddle/2.0),
-        sXmiddle = yMiddle/sin(betaMiddle/2.0),
+        sYmiddle = xMiddle/sin(inAlpha/2.0),
+        sXmiddle = yMiddle/sin(inBeta/2.0),
         sYmiddleSqr = pow(sYmiddle, 2.0),
         sXmiddleSqr = pow(sXmiddle, 2.0),
         floorToEye = inH*CEILING_HEIGHT, // (cell lengths)
@@ -57,6 +56,7 @@ static void fill(
             sX = sqrt(pow(xMiddle-dX, 2.0)+sXmiddleSqr);
         
         betaTopX[x] = asin(yMiddle/sX);
+        assert(betaTopX[x]>0.0);
         aX[x] = yMiddle/tan(betaTopX[x]);
         
         inOutFloorY[x] = -1;
@@ -72,7 +72,7 @@ static void fill(
         for(x = 0;x<inWidth;++x)
         {
             int const pos = y*inWidth+x;
-            double epsilon = -1.0; // Epsilon is the angle from pixel 0 = 0 degrees to pixel inWidth-1 = inAlpha degrees.
+            double epsilon = -1.0; // Epsilon is the angle from pixel 0 = 0 degree to pixel inWidth-1 = inAlpha degree.
             
             if(dY<yMiddle)
             {
@@ -109,33 +109,29 @@ static void fill(
                 epsilon = alphaLeftY+atan((dX-xMiddle)/aX[x]);
             }
 
-            inOutEta[pos] = (alphaLeftY-epsilon)*180.0/M_PI; // Eta is a pre-calculated angle to be used with player view angle, later.
+            inOutEta[pos] = alphaLeftY-epsilon; // Eta is a pre-calculated angle to be used with player view angle, later.
+            //inOutEta[pos] = CALC_ANGLE_TO_POS(inOutEta[pos]); // Not necessary, here.
 
-            // Not necessary, here:
-            //
-    //        if(inOutEta[x]<0.0)
-    //        {
-    //            inOutEta[x] = 360.0+inOutEta[x];
-    //        }
-    //        else
-    //        {
-    //            if(inOutEta[x]>=360.0)
-    //            {
-    //                inOutEta[x] -= 360.0;
-    //            }
-    //        }
-    //        assert((inOutEta[x]>=0)&&(inOutEta[x]<360.0));
-
-            //Deb_line("epsilon = %f, inOutEta[%d] = %f.", epsilon*180.0/M_PI, x, inOutEta[x])
+            //Deb_line("y = %d, x = %d: betaTopX = %f degree, delta = %f degree, e = %f cell length, d = %f cell length, epsilon = %f degree, eta = %f degree.", y, x, CALC_TO_DEG(betaTopX[x]), CALC_TO_DEG(delta), inOutE[pos], inOutD[pos], CALC_TO_DEG(epsilon), CALC_TO_DEG(inOutEta[x]))
         }
-        
-        //Deb_line("delta = %f, inOutE[%d] = %f cell lengths, inOutD[%d] = %f cell lengths.", delta*180.0/M_PI, y, inOutE[y], y, inOutD[y])
     }
     
 #ifndef NDEBUG
-    for(x = 0;x<inWidth;++x)
     {
-        assert(inOutFloorY[x]>0);
+        int firstY = -1;
+        
+        for(x = 0;x<inWidth;++x)
+        {
+            if(firstY==-1)
+            {
+                assert(inOutFloorY[x]>0);
+                firstY = inOutFloorY[x];
+            }
+            else
+            {
+                assert(firstY==inOutFloorY[x]);
+            }
+        }
     }
 #endif //NDEBUG
 
@@ -159,23 +155,12 @@ void Mt3d_draw(struct Mt3d * const inObj)
             int const pos = y*inObj->width+x;
             
             zeta[pos] = inObj->eta[pos]+inObj->gamma;
-            if(zeta[pos]<0.0)
-            {
-                zeta[pos] = 360.0+zeta[pos];
-            }
-            else
-            {
-                if(zeta[pos]>=360.0)
-                {
-                    zeta[pos] -= 360.0;
-                }
-            }
-            assert((zeta[pos]>=0.0)&&(zeta[pos]<360.0));
+            zeta[pos] = CALC_ANGLE_TO_POS(zeta[pos]);
 
-            sector[pos] = (unsigned char)(((int)zeta[pos])/90+1);
+            sector[pos] = (unsigned char)(((int)CALC_TO_DEG(zeta[pos]))/90+1);
             assert((sector[pos]>=1)&&(sector[pos]<=4));
 
-            //Deb_line("zeta[%d] = %f | sector[%d] = %d", x, zeta[x], x, sector[x])
+            //Deb_line("y = %d, x = %d: zeta = %f degree, sector = %d", y, x, CALC_TO_DEG(zeta[x]), sector[x])
         }
     }
     
@@ -206,23 +191,18 @@ void Mt3d_draw(struct Mt3d * const inObj)
             
             uint8_t * const colPix = (uint8_t*)(rowPix+x);
             
-//            if(x==27 && y==13)
-//            {
-//                Deb_line("HERE")
-//            }
-            
             switch(sector[pos])
             {
                 case 1:
                 {
                     assert(zeta[pos]!=0.0); // MT_TODO: TEST: Implement special case!
                     
-                    double const theta = 90.0-zeta[pos];
-                    assert(theta>0.0 && theta<90.0);
+                    double const theta = M_PI/2.0-zeta[pos];
+                    assert(theta>0.0 && theta<M_PI/2.0);
                     
-                    deltaY = cos(theta*M_PI/180.0)*inObj->d[pos];
+                    deltaY = cos(theta)*inObj->d[pos];
                     assert(deltaY>0.0);
-                    deltaX = sin(theta*M_PI/180.0)*inObj->d[pos];
+                    deltaX = sin(theta)*inObj->d[pos];
                     addX = 1;
                     addY = 1;
                     dCellX = (int)(deltaX+inObj->posX);
@@ -232,14 +212,14 @@ void Mt3d_draw(struct Mt3d * const inObj)
                 }
                 case 2:
                 {
-                    assert(zeta[pos]!=90.0); // MT_TODO: TEST: Implement special case!
+                    assert(zeta[pos]!=M_PI/2.0); // MT_TODO: TEST: Implement special case!
                     
-                    double const theta = 180.0-zeta[pos];
-                    assert(theta>0.0 && theta<90.0);
+                    double const theta = M_PI-zeta[pos];
+                    assert(theta>0.0 && theta<M_PI/2.0);
                     
-                    deltaY = -sin(theta*M_PI/180.0)*inObj->d[pos];
+                    deltaY = -sin(theta)*inObj->d[pos];
                     assert(deltaY<0.0);
-                    deltaX = cos(theta*M_PI/180.0)*inObj->d[pos];
+                    deltaX = cos(theta)*inObj->d[pos];
                     addX = -1;
                     addY = 1;
                     dCellX = (int)(inObj->posX-deltaX);
@@ -249,14 +229,14 @@ void Mt3d_draw(struct Mt3d * const inObj)
                 }
                 case 3:
                 {
-                    assert(zeta[pos]!=180.0); // MT_TODO: TEST: Implement special case!
+                    assert(zeta[pos]!=M_PI); // MT_TODO: TEST: Implement special case!
                     
-                    double const theta = 270.0-zeta[pos];
-                    assert(theta>0.0 && theta<90.0);
+                    double const theta = 3.0*M_PI/2.0-zeta[pos];
+                    assert(theta>0.0 && theta<M_PI/2.0);
                     
-                    deltaY = cos(theta*M_PI/180.0)*inObj->d[pos];
+                    deltaY = cos(theta)*inObj->d[pos];
                     assert(deltaY>0.0);
-                    deltaX = sin(theta*M_PI/180.0)*inObj->d[pos];
+                    deltaX = sin(theta)*inObj->d[pos];
                     addX = -1;
                     addY = -1;
                     dCellX = (int)(inObj->posX-deltaX);
@@ -265,14 +245,14 @@ void Mt3d_draw(struct Mt3d * const inObj)
                 }
                 case 4:
                 {
-                    assert(zeta[pos]!=270.0); // MT_TODO: TEST: Implement special case!
+                    assert(zeta[pos]!=3.0*M_PI/2.0); // MT_TODO: TEST: Implement special case!
                     
-                    double const theta = 360.0-zeta[pos];
-                    assert(theta>0.0 && theta<90.0);
+                    double const theta = CALC_PI_BY_2-zeta[pos];
+                    assert(theta>0.0 && theta<M_PI/2.0);
                     
-                    deltaY = -sin(theta*M_PI/180.0)*inObj->d[pos];
+                    deltaY = -sin(theta)*inObj->d[pos];
                     assert(deltaY<0.0);
-                    deltaX = cos(theta*M_PI/180.0)*inObj->d[pos];
+                    deltaX = cos(theta)*inObj->d[pos];
                     addX = 1;
                     addY = -1;
                     dCellX = (int)(deltaX+inObj->posX);
@@ -472,7 +452,7 @@ void Mt3d_delete(struct Mt3d * const inObj)
     free(inObj);
 }
 
-void Mt3d_update(int const inAlpha, double const inBeta, double const inH, struct Mt3d * const inOutObj)
+void Mt3d_update(double const inAlpha, double const inBeta, double const inH, struct Mt3d * const inOutObj)
 {
     fill(inOutObj->width, inOutObj->height, inAlpha, inBeta, inH, inOutObj->d, inOutObj->e, inOutObj->floorY, inOutObj->eta);
     
@@ -480,10 +460,10 @@ void Mt3d_update(int const inAlpha, double const inBeta, double const inH, struc
     inOutObj->beta = inBeta;
     inOutObj->h = inH;
     
-    Deb_line("Alpha = %d, beta = %f, h(-eight) = %f.", inAlpha, inBeta, inH)
+    Deb_line("Alpha = %f degree, beta = %f degree, h(-eight) = %f cell length.", CALC_TO_DEG(inAlpha), CALC_TO_DEG(inBeta), inH)
 }
 
-struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, int const inAlpha, double const inBeta, double const inH)
+struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, double const inAlpha, double const inBeta, double const inH)
 {
     struct Mt3d * const retVal = malloc(sizeof *retVal);
     assert(retVal!=NULL);
@@ -505,9 +485,9 @@ struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, int const inAlp
     {
         .width = inWidth,
         .height = inHeight,
-        .alpha = 0, // Invalidates
+        .alpha = 0.0, // Invalidates
         .beta = 0.0, // Invalidates
-        .h = 0.0, // Invalidates
+        .h = -1.0, // Invalidates
             
         .d = d,
         .e = e,
