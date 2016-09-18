@@ -19,11 +19,11 @@
 
 static int const WIDTH = 800;
 static int const HEIGHT = 600;
-static double const ALPHA = CALC_TO_RAD(50.0);
+static double const ALPHA = CALC_TO_RAD(45.0);
 static double const ALPHA_MIN = CALC_TO_RAD(20.0);
 static double const ALPHA_MAX = CALC_TO_RAD(160.0);
 static double const ALPHA_STEP = CALC_TO_RAD(5.0);
-static double const H = 0.5; // As part of room height (e.g. 0.5 = 50% of room height).
+static double const H = 0.3; // As part of room height (e.g. 0.5 = 50% of room height).
 static double const H_MIN = 0.1;
 static double const H_MAX = 0.9;
 static double const H_STEP = 0.1;
