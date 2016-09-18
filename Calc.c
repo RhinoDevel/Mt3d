@@ -1,8 +1,6 @@
 
 // MT, 2016sep11
 
-#include <math.h>
-
 #include "Calc.h"
 
 double Calc_getTriangleSideA(double const inGammaRad, double const inCleftOfAltitudeC, double const inCrightOfAltitudeC)
