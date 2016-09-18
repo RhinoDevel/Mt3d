@@ -15,7 +15,6 @@
 
 //#define MT_DOUBLE_TO_INT_ROUND(x) ((int)(((x)<0.0)?((x)-0.5):((x)+0.5)))
 
-static const double EQUAL_D_AND_E = 0.0;
 static const double CEILING_HEIGHT = 1.0; // 1.0 = Height equals length of one floor/ceiling cell.
 
 static void fill(
@@ -35,11 +34,9 @@ static void fill(
     assert(inHeight%2==0);
     assert(inWidth%2==0);
     
-    double * const alphaLeftY = malloc(inHeight*sizeof *alphaLeftY), // To hold alphaX/2.
-        * const betaTopX = malloc(inWidth*sizeof *betaTopX), // To hold betaX/2.
+    double * const betaTopX = malloc(inWidth*sizeof *betaTopX), // To hold betaX/2.
         * const aX = malloc(inWidth*sizeof *aX); // Lengths in pixel between point of view and pixel plane for each x.
    
-    assert(alphaLeftY!=NULL);
     assert(betaTopX!=NULL);
     assert(aX!=NULL);
     
@@ -54,30 +51,22 @@ static void fill(
         floorToEye = inH*CEILING_HEIGHT, // (cell lengths)
         ceilingToEye = CEILING_HEIGHT-floorToEye; // (cell lengths)
     
-    for(y =0;y<inHeight;++y)
-    {
-        double const dY = (double)y,
-            sY = sqrt(pow(yMiddle-dY, 2.0)+sYmiddleSqr);
-        
-        alphaLeftY[y] = asin(xMiddle/sY);
-    }
-    for(x =0;x<inWidth;++x)
+    for(x = 0;x<inWidth;++x)
     {
         double const dX = (double)x,
             sX = sqrt(pow(xMiddle-dX, 2.0)+sXmiddleSqr);
         
         betaTopX[x] = asin(yMiddle/sX);
         aX[x] = yMiddle/tan(betaTopX[x]);
-    }
-
-    for(x = 0;x<inWidth;++x)
-    {
+        
         inOutFloorY[x] = -1;
     }
     
     for(y = 0;y<inHeight;++y)
     {
-        double const dY = (double)y;
+        double const dY = (double)y,
+            sY = sqrt(pow(yMiddle-dY, 2.0)+sYmiddleSqr),
+            alphaLeftY = asin(xMiddle/sY); // To hold alphaX/2.
         double delta = 0.0;
 
         for(x = 0;x<inWidth;++x)
@@ -88,54 +77,39 @@ static void fill(
             if(dY<yMiddle)
             {
                 delta = betaTopX[x]-atan((yMiddle-dY)/aX[x]);
-            }
-            else
-            {
-                delta = betaTopX[x]+atan((dY-yMiddle)/aX[x]);
-            }
-            
-            if(delta<betaTopX[x])
-            {
-                assert(dY<yMiddle);
+                assert(delta<betaTopX[x]);
+                
                 inOutE[pos] = ceilingToEye/sin(betaTopX[x]-delta);
                 inOutD[pos] = inOutE[pos]*cos(betaTopX[x]-delta);
             }
             else
             {
-                if(delta>betaTopX[x])
-                {
-                    assert(dY>yMiddle);
-                    inOutE[pos] = floorToEye/sin(delta-betaTopX[x]);
-                    inOutD[pos] = inOutE[y]*cos(delta-betaTopX[x]);
+                assert(dY>yMiddle);
+                delta = betaTopX[x]+atan((dY-yMiddle)/aX[x]);
+                assert(delta>betaTopX[x]);
+                
+                inOutE[pos] = floorToEye/sin(delta-betaTopX[x]);
+                inOutD[pos] = inOutE[y]*cos(delta-betaTopX[x]);
 
-                    if(inOutFloorY[x]==-1)
-                    {
-                        inOutFloorY[x] = y;
-                    }
-                }
-                else
+                if(inOutFloorY[x]==-1)
                 {
-                    assert(dY==yMiddle);
-                    inOutD[pos] = EQUAL_D_AND_E;
-                    inOutE[pos] = EQUAL_D_AND_E;
-
-                    //Deb_line("Warning: Delta %f to use for y value %d exactly equals top part %f of beta %f!", delta*180.0/M_PI, y, betaTop*180.0/M_PI, inBeta)
+                    inOutFloorY[x] = y;
                 }
             }
             
             double const dX = (double)x;
-            
 
             if(dX<xMiddle)
             {
-                epsilon = alphaLeftY[y]-atan((xMiddle-dX)/aX[x]);
+                epsilon = alphaLeftY-atan((xMiddle-dX)/aX[x]);
             }
             else
             {   
-                epsilon = alphaLeftY[y]+atan((dX-xMiddle)/aX[x]);
+                assert(dX!=xMiddle);
+                epsilon = alphaLeftY+atan((dX-xMiddle)/aX[x]);
             }
 
-            inOutEta[pos] = (alphaLeftY[y]-epsilon)*180.0/M_PI; // Eta is a pre-calculated angle to be used with player view angle, later.
+            inOutEta[pos] = (alphaLeftY-epsilon)*180.0/M_PI; // Eta is a pre-calculated angle to be used with player view angle, later.
 
             // Not necessary, here:
             //
@@ -158,8 +132,13 @@ static void fill(
         //Deb_line("delta = %f, inOutE[%d] = %f cell lengths, inOutD[%d] = %f cell lengths.", delta*180.0/M_PI, y, inOutE[y], y, inOutD[y])
     }
     
-    //assert(inOutFloorY[x]>0);
-    free(alphaLeftY);
+#ifndef NDEBUG
+    for(x = 0;x<inWidth;++x)
+    {
+        assert(inOutFloorY[x]>0);
+    }
+#endif //NDEBUG
+
     free(betaTopX);
     free(aX);
 }
