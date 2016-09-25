@@ -204,8 +204,25 @@ void Mt3d_draw(struct Mt3d * const inObj)
             //Deb_line("y = %d, x = %d: zeta = %f degree, sector = %d", y, x, CALC_TO_DEG(zeta[x]), sector[x])
         }
     }
+
+    // Cell coordinates     Cartesian coordinates
+    //
+    //  00000000001          00000000001
+    //  01234567890          01234567890
+    // 0XXXXXXXXXXX         8
+    // 1X.........X         7
+    // 2X.........X         6
+    // 3X...E.....X         5
+    // 4X.........X         4
+    // 5X...p.X...X         3
+    // 6X.........X         2
+    // 7X.........X         1
+    // 8XXXXXXXXXXX         0
+    //
+    // => yCartesian = heightCell-1-yCell
+    // => yCell      = heightCell-1-yCartesian
     
-    double const kPosY = ((double)(inObj->map->height))-inObj->posY;
+    double const kPosY = ((double)(inObj->map->height-1))-inObj->posY;
     
     //Deb_line("kPosY = %f", kPosY)
     
@@ -251,7 +268,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
                     dCellX = (int)(deltaX+inObj->posX);
                     
                     double const kY = deltaY+kPosY;
-                    dCellY = inObj->map->height-(int)kY;//(kY>0.0?kY+0.5:kY-0.5);                    
+                    dCellY = (int)((double)(inObj->map->height-1)-kY);//(kY>0.0?kY+0.5:kY-0.5);                    
                     break;
                 }
                 case 2:
@@ -269,7 +286,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
                     dCellX = (int)(inObj->posX-deltaX);
                     
                     double const kY = kPosY-deltaY;
-                    dCellY = inObj->map->height-(int)kY;//(kY>0.0?kY+0.5:kY-0.5);
+                    dCellY = (int)((double)(inObj->map->height-1)-kY);//(kY>0.0?kY+0.5:kY-0.5);
                     break;
                 }
                 case 3:
@@ -287,7 +304,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
                     dCellX = (int)(inObj->posX-deltaX);
                     
                     double const kY = kPosY-deltaY;
-                    dCellY = inObj->map->height-(int)kY;//(kY>0.0?kY+0.5:kY-0.5);
+                    dCellY = (int)((double)(inObj->map->height-1)-kY);//(kY>0.0?kY+0.5:kY-0.5);
                     break;
                 }
                 case 4:
@@ -305,7 +322,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
                     dCellX = (int)(deltaX+inObj->posX);
                     
                     double const kY = deltaY+kPosY;
-                    dCellY = inObj->map->height-(int)kY;//(kY>0.0?kY+0.5:kY-0.5);
+                    dCellY = (int)((double)(inObj->map->height-1)-kY);//(kY>0.0?kY+0.5:kY-0.5);
                     break;
                 }
                     
