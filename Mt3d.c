@@ -6,7 +6,6 @@
 #include <stdint.h>
 #include <assert.h>
 #include <math.h>
-#include <stdbool.h>
 
 #include "Deb.h"
 #include "Mt3d.h"
@@ -16,6 +15,7 @@
 //#define MT_DOUBLE_TO_INT_ROUND(x) ((int)(((x)<0.0)?((x)-0.5):((x)+0.5)))
 
 static const double CEILING_HEIGHT = 1.0; // 1.0 = Height equals length of one floor/ceiling cell.
+static const double PLAYER_STEP_LEN = 0.2; // Cell lengths.
 
 static void fill(
     int const inWidth,
@@ -139,6 +139,47 @@ static void fill(
     free(aX);
 }
 
+bool Mt3d_pos_forwardOrBackward(struct Mt3d * const inOutObj, bool inForward)
+{
+    int const zeroSector = ((int)CALC_TO_DEG(inOutObj->gamma))/90; // Integer division (truncates).
+    double const angle = (inForward?inOutObj->gamma:CALC_ANGLE_TO_POS(inOutObj->gamma-M_PI))-(double)zeroSector*M_PI/2.0;
+    double x = -1.0,
+        y = -1.0;
+    
+    assert(angle!=0.0); // MT_TODO: TEST: Implement special cases!
+    
+    double const deltaY = sin(angle)*PLAYER_STEP_LEN,
+        deltaX = cos(angle)*PLAYER_STEP_LEN;
+    
+    switch(zeroSector)
+    {
+        case 0:
+            x = inOutObj->posX+deltaX;
+            y = inOutObj->posY+(-deltaY);
+            break;
+        case 1:
+            x = inOutObj->posX-deltaX;
+            y = inOutObj->posY+(-deltaY);
+            break;
+        case 2:
+            x = inOutObj->posX-deltaX;
+            y = inOutObj->posY-(-deltaY);
+            break;
+        case 3:
+            x = inOutObj->posX+deltaX;
+            y = inOutObj->posY-(-deltaY);
+            break;
+        default:
+            assert(false);
+            break;
+    }
+    
+    Deb_line("(%f,%f) => (%f,%f).", inOutObj->posX, inOutObj->posY, x, y);
+    inOutObj->posX = x;
+    inOutObj->posY = y;
+    return true; // MT_TODO: TEST: Return false, if not possible (wall)!
+}
+
 void Mt3d_draw(struct Mt3d * const inObj)
 {
     int x = 0,
@@ -157,7 +198,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
             zeta[pos] = inObj->eta[pos]+inObj->gamma;
             zeta[pos] = CALC_ANGLE_TO_POS(zeta[pos]);
 
-            sector[pos] = (unsigned char)(((int)CALC_TO_DEG(zeta[pos]))/90+1);
+            sector[pos] = (unsigned char)(((int)CALC_TO_DEG(zeta[pos]))/90+1); // Integer division (truncates).
             assert((sector[pos]>=1)&&(sector[pos]<=4));
 
             //Deb_line("y = %d, x = %d: zeta = %f degree, sector = %d", y, x, CALC_TO_DEG(zeta[x]), sector[x])
@@ -209,7 +250,8 @@ void Mt3d_draw(struct Mt3d * const inObj)
                     addY = 1;
                     dCellX = (int)(deltaX+inObj->posX);
                     
-                    dCellY = inObj->map->height-(int)(deltaY+kPosY);                    
+                    double const kY = deltaY+kPosY;
+                    dCellY = inObj->map->height-(int)kY;//(kY>0.0?kY+0.5:kY-0.5);                    
                     break;
                 }
                 case 2:
@@ -226,7 +268,8 @@ void Mt3d_draw(struct Mt3d * const inObj)
                     addY = 1;
                     dCellX = (int)(inObj->posX-deltaX);
                     
-                    dCellY = inObj->map->height-(int)(kPosY-deltaY);
+                    double const kY = kPosY-deltaY;
+                    dCellY = inObj->map->height-(int)kY;//(kY>0.0?kY+0.5:kY-0.5);
                     break;
                 }
                 case 3:
@@ -242,7 +285,9 @@ void Mt3d_draw(struct Mt3d * const inObj)
                     addX = -1;
                     addY = -1;
                     dCellX = (int)(inObj->posX-deltaX);
-                    dCellY = inObj->map->height-(int)(kPosY-deltaY);
+                    
+                    double const kY = kPosY-deltaY;
+                    dCellY = inObj->map->height-(int)kY;//(kY>0.0?kY+0.5:kY-0.5);
                     break;
                 }
                 case 4:
@@ -258,7 +303,9 @@ void Mt3d_draw(struct Mt3d * const inObj)
                     addX = 1;
                     addY = -1;
                     dCellX = (int)(deltaX+inObj->posX);
-                    dCellY = inObj->map->height-(int)(deltaY+kPosY);
+                    
+                    double const kY = deltaY+kPosY;
+                    dCellY = inObj->map->height-(int)kY;//(kY>0.0?kY+0.5:kY-0.5);
                     break;
                 }
                     
@@ -280,7 +327,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
             {
                 xForHit += 1;
             }
-            yForHit = (int)kPosY;
+            yForHit = (int)(kPosY/*+0.5*/); // MT_TODO: TEST: There is some bug (maybe here) causing wrong frame content, if player's Y position coordinate is non-integer!
             if(addY==1)
             {
                 yForHit += 1;
@@ -344,9 +391,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
                         xForHit += addX;
                         ++xCount;
                     }
-
-                    // MT_TODO: TEST: Use distance to cell for luminance (or something)!
-
+                    
                     if((cellX==dCellX)&&(cellY==dCellY))
                     {
                         {
@@ -398,6 +443,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
                     {
                         if((cellX<0)||(cellY<0)||(cellX>=inObj->map->width)||(cellY>=inObj->map->height))
                         {
+                            assert(false); // Shouldn't this be impossible?
                             //Deb_line("x = %d, y = %d, zeta[x] = %f, sector[x] = %d, cellX = %d, cellY = %d.", x, y, zeta[x], sector[x], cellX, cellY)
                                 
                             colPix[2] = 0xFF;
@@ -428,9 +474,9 @@ void Mt3d_draw(struct Mt3d * const inObj)
                     }
                 }while(!done);
             }
-            
-            double const countLen = xCount==0?(double)yCount:yCount==0?(double)xCount:sqrt(pow((double)xCount, 2.0)+pow((double)yCount, 2.0)),
-                maxVisible = 10.0,
+
+            double const maxVisible = 5.0,
+                countLen = xCount==0?(double)yCount:yCount==0?(double)xCount:sqrt(pow((double)xCount, 2.0)+pow((double)yCount, 2.0)),
                 brightness = (maxVisible-fmin(countLen, maxVisible))/maxVisible; // countLen 0 = 1.0, countLen maxVisible = 0.0;
             int const sub = (int)((255.0/3.0)*(1.0-brightness)+0.5), // Rounds
                 r = (int)colPix[2]-sub,
@@ -439,8 +485,6 @@ void Mt3d_draw(struct Mt3d * const inObj)
             colPix[2] = r>0?(unsigned char)r:0;
             colPix[1] = g>0?(unsigned char)g:0;
             colPix[0] = blue>0?(unsigned char)blue:0;
-            
-            
         }
     }
     

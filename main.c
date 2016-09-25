@@ -17,8 +17,8 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 
-static int const WIDTH = 800;
-static int const HEIGHT = 600;
+static int const WIDTH = 320;
+static int const HEIGHT = 240;
 static double const ALPHA = CALC_TO_RAD(45.0);
 static double const ALPHA_MIN = CALC_TO_RAD(20.0);
 static double const ALPHA_MAX = CALC_TO_RAD(160.0);
@@ -27,7 +27,7 @@ static double const H = 0.3; // As part of room height (e.g. 0.5 = 50% of room h
 static double const H_MIN = 0.1;
 static double const H_MAX = 0.9;
 static double const H_STEP = 0.1;
-static double const GAMMA_STEP = CALC_TO_RAD(13.0);
+static double const GAMMA_STEP = CALC_TO_RAD(5.0);
 
 static struct Mt3d * o = NULL;
 
@@ -69,6 +69,13 @@ static gboolean on_key_press(GtkWidget* widget, GdkEventKey* event, gpointer use
             retVal = TRUE;
             break;
             
+        case GDK_KEY_w:
+            retVal = Mt3d_pos_forwardOrBackward(o, true);
+            break;
+        case GDK_KEY_s:
+            retVal = Mt3d_pos_forwardOrBackward(o, false);
+            break;
+           
         case GDK_KEY_l:
         {
             double h = o->h+H_STEP;
@@ -137,7 +144,7 @@ static gboolean on_key_press(GtkWidget* widget, GdkEventKey* event, gpointer use
 
         int const playerX = (int)o->posX,
             playerY = (int)o->posY;
-        
+      
         Map_print(o->map, &playerX, &playerY);
     }
 
