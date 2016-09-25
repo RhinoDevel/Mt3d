@@ -19,6 +19,7 @@
 
 static int const WIDTH = 320;
 static int const HEIGHT = 240;
+static double const SCALE_FACTOR = 4.0;
 static double const ALPHA = CALC_TO_RAD(45.0);
 static double const ALPHA_MIN = CALC_TO_RAD(20.0);
 static double const ALPHA_MAX = CALC_TO_RAD(160.0);
@@ -44,7 +45,9 @@ static double getBeta(double const inAlpha)
 
 static void do_drawing(cairo_t* cr)
 {
-    cairo_set_source_surface(cr, glob.image, 0, 0);
+    cairo_scale(cr, SCALE_FACTOR, SCALE_FACTOR);
+    cairo_set_source_surface(cr, glob.image, 0, 0); 
+    cairo_pattern_set_filter(cairo_get_source(cr), CAIRO_FILTER_FAST);
     cairo_paint(cr);    
 }
 
@@ -180,6 +183,8 @@ int main(int argc, char *argv[])
     
     GtkWidget* window;
     int const stride = cairo_format_stride_for_width(CAIRO_FORMAT_RGB24, WIDTH);
+    int const scaledWidth = SCALE_FACTOR*WIDTH,
+        scaledHeight = SCALE_FACTOR*HEIGHT;
     assert(stride>0);
     assert(stride==WIDTH*4);
     glob.image = cairo_image_surface_create_for_data (o->pixels, CAIRO_FORMAT_RGB24, WIDTH, HEIGHT, stride);
@@ -192,7 +197,7 @@ int main(int argc, char *argv[])
     g_signal_connect(window, "destroy", G_CALLBACK (gtk_main_quit), NULL);
     g_signal_connect (G_OBJECT (window), "key_press_event", G_CALLBACK (on_key_press), NULL);
     gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
-    gtk_window_set_default_size(GTK_WINDOW(window), WIDTH+30, HEIGHT+30); 
+    gtk_window_set_default_size(GTK_WINDOW(window), scaledWidth+30, scaledHeight+30); 
     gtk_window_set_title(GTK_WINDOW(window), "MT 3D");
     gtk_widget_show_all(window);
     gtk_main();
