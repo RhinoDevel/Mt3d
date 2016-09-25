@@ -9,11 +9,11 @@
 #include "MapSample.h"
 #include "Calc.h"
 
-static int const WIDTH = 8;
-static int const HEIGHT = 8;
+static int const WIDTH = 11;
+static int const HEIGHT = 9;
 
-static double const POS_X = 4.0;
-static double const POS_Y = 4.0;
+static double const POS_X = 4.123;
+static double const POS_Y = 5.321;
 
 static double const GAMMA = CALC_TO_RAD(90.0);
 
