@@ -141,42 +141,63 @@ static void fill(
 
 bool Mt3d_pos_forwardOrBackward(struct Mt3d * const inOutObj, bool inForward)
 {
-    int const zeroSector = ((int)CALC_TO_DEG(inOutObj->gamma))/90; // Integer division (truncates).
-    double const angle = (inForward?inOutObj->gamma:CALC_ANGLE_TO_POS(inOutObj->gamma-M_PI))-(double)zeroSector*M_PI/2.0;
-    double x = -1.0,
-        y = -1.0;
-    
-    assert(angle!=0.0); // MT_TODO: TEST: Implement special cases!
-    
-    double const deltaY = sin(angle)*PLAYER_STEP_LEN,
-        deltaX = cos(angle)*PLAYER_STEP_LEN;
+    double const MIN = 0.001,
+        iota = inForward?inOutObj->gamma:CALC_ANGLE_TO_POS(inOutObj->gamma-M_PI); // Complete angle in wanted direction (0 rad <= a < 2*PI rad).
+    int const zeroSector = (int)CALC_TO_DEG(iota)/90; // Sector of Cartesian coordinate system from 0 to 3 instead of I, II, III, IV (counter-clockwise).
+    double kappa = -1.0;
+    double addX = 0.0, // Cell length to add to X position.
+        subY = 0.0; // Cell length to subtract from Y position.
     
     switch(zeroSector)
     {
         case 0:
-            x = inOutObj->posX+deltaX;
-            y = inOutObj->posY+(-deltaY);
+            kappa = iota;
+            if(kappa<MIN)
+            {
+                addX = PLAYER_STEP_LEN;
+                break;    
+            }
+            addX = PLAYER_STEP_LEN*cos(kappa);
+            subY = PLAYER_STEP_LEN*sin(kappa);
             break;
         case 1:
-            x = inOutObj->posX-deltaX;
-            y = inOutObj->posY+(-deltaY);
+            kappa = iota-CALC_PI_MUL_0_5;
+            if(kappa<MIN)
+            {
+                subY = PLAYER_STEP_LEN;
+                break;    
+            }
+            addX = -PLAYER_STEP_LEN*sin(kappa);
+            subY = PLAYER_STEP_LEN*cos(kappa);
             break;
         case 2:
-            x = inOutObj->posX-deltaX;
-            y = inOutObj->posY-(-deltaY);
+            kappa = iota-M_PI;
+            if(kappa<MIN)
+            {
+                addX = -PLAYER_STEP_LEN;
+                break;    
+            }
+            addX = -PLAYER_STEP_LEN*cos(kappa);
+            subY = -PLAYER_STEP_LEN*sin(kappa);
             break;
         case 3:
-            x = inOutObj->posX+deltaX;
-            y = inOutObj->posY-(-deltaY);
+            kappa = iota-CALC_PI_MUL_1_5;
+            if(kappa<MIN)
+            {
+                subY = -PLAYER_STEP_LEN;
+                break;    
+            }
+            addX = PLAYER_STEP_LEN*sin(kappa);
+            subY = -PLAYER_STEP_LEN*cos(kappa);
             break;
+            
         default:
             assert(false);
             break;
     }
+    inOutObj->posX += addX;
+    inOutObj->posY -= subY; // Subtraction, because cell coordinate system starts on top, Cartesian coordinate system at bottom.
     
-    Deb_line("(%f,%f) => (%f,%f).", inOutObj->posX, inOutObj->posY, x, y);
-    inOutObj->posX = x;
-    inOutObj->posY = y;
     return true; // MT_TODO: TEST: Return false, if not possible (wall)!
 }
 
@@ -311,7 +332,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
                 {
                     assert(zeta[pos]!=3.0*M_PI/2.0); // MT_TODO: TEST: Implement special case!
                     
-                    double const theta = CALC_PI_BY_2-zeta[pos];
+                    double const theta = CALC_PI_MUL_2_0-zeta[pos];
                     assert(theta>0.0 && theta<M_PI/2.0);
                     
                     deltaY = -sin(theta)*inObj->d[pos];
@@ -492,7 +513,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
                 }while(!done);
             }
 
-            double const maxVisible = 5.0,
+            double const maxVisible = 7.0,
                 countLen = xCount==0?(double)yCount:yCount==0?(double)xCount:sqrt(pow((double)xCount, 2.0)+pow((double)yCount, 2.0)),
                 brightness = (maxVisible-fmin(countLen, maxVisible))/maxVisible; // countLen 0 = 1.0, countLen maxVisible = 0.0;
             int const sub = (int)((255.0/3.0)*(1.0-brightness)+0.5), // Rounds
