@@ -522,9 +522,10 @@ void Mt3d_draw(struct Mt3d * const inObj)
             }
 
             double const maxVisible = 7.0,
+                maxDarkness = 0.8,
                 countLen = xCount==0?(double)yCount:yCount==0?(double)xCount:sqrt(pow((double)xCount, 2.0)+pow((double)yCount, 2.0)),
                 brightness = (maxVisible-fmin(countLen, maxVisible))/maxVisible; // countLen 0 = 1.0, countLen maxVisible = 0.0;
-            int const sub = (int)((255.0/3.0)*(1.0-brightness)+0.5), // Rounds
+            int const sub = (int)((maxDarkness*255.0)*(1.0-brightness)+0.5), // Rounds
                 r = (int)colPix[2]-sub,
                 g = (int)colPix[1]-sub,
                 blue = (int)colPix[0]-sub;
