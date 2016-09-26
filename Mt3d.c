@@ -200,7 +200,7 @@ bool Mt3d_pos_forwardOrBackward(struct Mt3d * const inOutObj, bool inForward)
     x += addX;
     y -= subY; // Subtraction, because cell coordinate system starts on top, Cartesian coordinate system at bottom.
     
-    if(inOutObj->map->cells[(int)y*inOutObj->map->width+(int)x]==CellType_block_default) // MT_TODO: TEST: Player has no width!
+    if((enum CellType)inOutObj->map->cells[(int)y*inOutObj->map->width+(int)x]==CellType_block_default) // MT_TODO: TEST: Player has no width!
     {
         return false;
     }
@@ -381,19 +381,41 @@ void Mt3d_draw(struct Mt3d * const inObj)
             
             if((cellX==dCellX)&&(cellY==dCellY))
             {
-                if(y<inObj->floorY[y])
+                switch((enum CellType)inObj->map->cells[cellY*inObj->map->width+cellX])
                 {
-                    colPix[2] = 0;
-                    colPix[1] = 0;
-                    colPix[0] = 0xFF;
-                }
-                else
-                {
-                    colPix[2] = 0;
-                    colPix[1] = 0xFF;
-                    colPix[0] = 0;
-                    
-                    // MT_TODO: TEST: Add exit!
+                    case CellType_floor_default:
+                        if(y<inObj->floorY[y])
+                        {
+                            colPix[2] = 0;
+                            colPix[1] = 0;
+                            colPix[0] = 0xFF;
+                        }
+                        else
+                        {
+                            colPix[2] = 0;
+                            colPix[1] = 0xFF;
+                            colPix[0] = 0;
+                        }
+                        break;
+                    case CellType_floor_exit:
+                        if(y<inObj->floorY[y])
+                        {
+                            colPix[2] = 0xFF;
+                            colPix[1] = 0xFF;
+                            colPix[0] = 0;
+                        }
+                        else
+                        {
+                            colPix[2] = 0;
+                            colPix[1] = 0xFF;
+                            colPix[0] = 0xFF;   
+                        }
+                        break;
+
+                    case CellType_block_default: // (falls through)
+                    default:
+                        assert(false);
+                        break;
                 }
             }
             else
@@ -465,9 +487,9 @@ void Mt3d_draw(struct Mt3d * const inObj)
                                 case CellType_floor_exit:
                                     if(y<inObj->floorY[y])
                                     {
-                                        colPix[2] = 0;
-                                        colPix[1] = 0;
-                                        colPix[0] = 0xFF;
+                                        colPix[2] = 0xFF;
+                                        colPix[1] = 0xFF;
+                                        colPix[0] = 0;
                                     }
                                     else
                                     {
@@ -521,7 +543,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
                 }while(!done);
             }
 
-            double const maxVisible = 7.0,
+            double const maxVisible = 7.0, // In cell length.
                 maxDarkness = 0.8,
                 countLen = xCount==0?(double)yCount:yCount==0?(double)xCount:sqrt(pow((double)xCount, 2.0)+pow((double)yCount, 2.0)),
                 brightness = (maxVisible-fmin(countLen, maxVisible))/maxVisible; // countLen 0 = 1.0, countLen maxVisible = 0.0;
