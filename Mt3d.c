@@ -146,7 +146,9 @@ bool Mt3d_pos_forwardOrBackward(struct Mt3d * const inOutObj, bool inForward)
     int const zeroSector = (int)CALC_TO_DEG(iota)/90; // Sector of Cartesian coordinate system from 0 to 3 instead of I, II, III, IV (counter-clockwise).
     double kappa = -1.0;
     double addX = 0.0, // Cell length to add to X position.
-        subY = 0.0; // Cell length to subtract from Y position.
+        subY = 0.0, // Cell length to subtract from Y position.
+        x = inOutObj->posX,
+        y = inOutObj->posY;
     
     switch(zeroSector)
     {
@@ -195,10 +197,16 @@ bool Mt3d_pos_forwardOrBackward(struct Mt3d * const inOutObj, bool inForward)
             assert(false);
             break;
     }
-    inOutObj->posX += addX;
-    inOutObj->posY -= subY; // Subtraction, because cell coordinate system starts on top, Cartesian coordinate system at bottom.
+    x += addX;
+    y -= subY; // Subtraction, because cell coordinate system starts on top, Cartesian coordinate system at bottom.
     
-    return true; // MT_TODO: TEST: Return false, if not possible (wall)!
+    if(inOutObj->map->cells[(int)y*inOutObj->map->width+(int)x]==CellType_block_default) // MT_TODO: TEST: Player has no width!
+    {
+        return false;
+    }
+    inOutObj->posX = x;
+    inOutObj->posY = y; 
+    return true;
 }
 
 void Mt3d_draw(struct Mt3d * const inObj)
