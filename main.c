@@ -78,6 +78,13 @@ static gboolean on_key_press(GtkWidget* widget, GdkEventKey* event, gpointer use
         case GDK_KEY_s:
             retVal = Mt3d_pos_forwardOrBackward(o, false);
             break;
+            
+        case GDK_KEY_q:
+            retVal = Mt3d_pos_leftOrRight(o, true);
+            break;
+        case GDK_KEY_e:
+            retVal = Mt3d_pos_leftOrRight(o, false);
+            break;
            
         case GDK_KEY_l:
         {

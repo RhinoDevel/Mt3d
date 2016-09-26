@@ -139,11 +139,10 @@ static void fill(
     free(aX);
 }
 
-bool Mt3d_pos_forwardOrBackward(struct Mt3d * const inOutObj, bool inForward)
+static bool Mt3d_pos_step(struct Mt3d * const inOutObj, double const inIota) // Iota: Complete angle in wanted direction (0 rad <= a < 2*PI rad).
 {
-    double const MIN = 0.001,
-        iota = inForward?inOutObj->gamma:CALC_ANGLE_TO_POS(inOutObj->gamma-M_PI); // Complete angle in wanted direction (0 rad <= a < 2*PI rad).
-    int const zeroSector = (int)CALC_TO_DEG(iota)/90; // Sector of Cartesian coordinate system from 0 to 3 instead of I, II, III, IV (counter-clockwise).
+    double const MIN = 0.001;
+    int const zeroSector = (int)CALC_TO_DEG(inIota)/90; // Sector of Cartesian coordinate system from 0 to 3 instead of I, II, III, IV (counter-clockwise).
     double kappa = -1.0;
     double addX = 0.0, // Cell length to add to X position.
         subY = 0.0, // Cell length to subtract from Y position.
@@ -153,7 +152,7 @@ bool Mt3d_pos_forwardOrBackward(struct Mt3d * const inOutObj, bool inForward)
     switch(zeroSector)
     {
         case 0:
-            kappa = iota;
+            kappa = inIota;
             if(kappa<MIN)
             {
                 addX = PLAYER_STEP_LEN;
@@ -163,7 +162,7 @@ bool Mt3d_pos_forwardOrBackward(struct Mt3d * const inOutObj, bool inForward)
             subY = PLAYER_STEP_LEN*sin(kappa);
             break;
         case 1:
-            kappa = iota-CALC_PI_MUL_0_5;
+            kappa = inIota-CALC_PI_MUL_0_5;
             if(kappa<MIN)
             {
                 subY = PLAYER_STEP_LEN;
@@ -173,7 +172,7 @@ bool Mt3d_pos_forwardOrBackward(struct Mt3d * const inOutObj, bool inForward)
             subY = PLAYER_STEP_LEN*cos(kappa);
             break;
         case 2:
-            kappa = iota-M_PI;
+            kappa = inIota-M_PI;
             if(kappa<MIN)
             {
                 addX = -PLAYER_STEP_LEN;
@@ -183,7 +182,7 @@ bool Mt3d_pos_forwardOrBackward(struct Mt3d * const inOutObj, bool inForward)
             subY = -PLAYER_STEP_LEN*sin(kappa);
             break;
         case 3:
-            kappa = iota-CALC_PI_MUL_1_5;
+            kappa = inIota-CALC_PI_MUL_1_5;
             if(kappa<MIN)
             {
                 subY = -PLAYER_STEP_LEN;
@@ -207,6 +206,16 @@ bool Mt3d_pos_forwardOrBackward(struct Mt3d * const inOutObj, bool inForward)
     inOutObj->posX = x;
     inOutObj->posY = y; 
     return true;
+}
+
+bool Mt3d_pos_forwardOrBackward(struct Mt3d * const inOutObj, bool inForward)
+{
+    return Mt3d_pos_step(inOutObj, inForward?inOutObj->gamma:CALC_ANGLE_TO_POS(inOutObj->gamma-M_PI));
+}
+
+bool Mt3d_pos_leftOrRight(struct Mt3d * const inOutObj, bool inLeft)
+{
+    return Mt3d_pos_step(inOutObj, CALC_ANGLE_TO_POS(inOutObj->gamma+(inLeft?1.0:-1.0)*CALC_PI_MUL_0_5));
 }
 
 void Mt3d_draw(struct Mt3d * const inObj)
