@@ -489,7 +489,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
                                     colPix[2] = 0xFF;
                                     colPix[1] = 0;
                                     colPix[0] = 0;
-                                    countLen = sqrt(pow(kLastY-kPosY, 2.0)+pow(lastX-inObj->posX, 2.0)); // This is just the equivalent of "d", not of "e"!
+                                    countLen = sqrt(pow(kLastY-kPosY, 2.0)+pow(lastX-inObj->posX, 2.0))*inObj->e[pos]/inObj->d[pos];
                                     break;
                                 case CellType_floor_default:
                                     if(y<inObj->floorY[y])
@@ -550,7 +550,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
                                     colPix[2] = 0xFF;
                                     colPix[1] = 0;
                                     colPix[0] = 0;
-                                    countLen = sqrt(pow(kLastY-kPosY, 2.0)+pow(lastX-inObj->posX, 2.0)); // This is just the equivalent of "d", not of "e"!
+                                    countLen = sqrt(pow(kLastY-kPosY, 2.0)+pow(lastX-inObj->posX, 2.0))*inObj->e[pos]/inObj->d[pos];
                                     done = true;
                                     break;
                                 case CellType_floor_default:
