@@ -306,7 +306,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
                     dCellX = (int)(deltaX+inObj->posX);
                     
                     double const kY = deltaY+kPosY;
-                    dCellY = (int)((double)(inObj->map->height-1)-kY);//(kY>0.0?kY+0.5:kY-0.5);                    
+                    dCellY = (int)((double)(inObj->map->height-1)-kY);               
                     break;
                 }
                 case 2:
@@ -324,7 +324,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
                     dCellX = (int)(inObj->posX-deltaX);
                     
                     double const kY = kPosY-deltaY;
-                    dCellY = (int)((double)(inObj->map->height-1)-kY);//(kY>0.0?kY+0.5:kY-0.5);
+                    dCellY = (int)((double)(inObj->map->height-1)-kY);
                     break;
                 }
                 case 3:
@@ -342,7 +342,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
                     dCellX = (int)(inObj->posX-deltaX);
                     
                     double const kY = kPosY-deltaY;
-                    dCellY = (int)((double)(inObj->map->height-1)-kY);//(kY>0.0?kY+0.5:kY-0.5);
+                    dCellY = (int)((double)(inObj->map->height-1)-kY);
                     break;
                 }
                 case 4:
@@ -360,7 +360,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
                     dCellX = (int)(deltaX+inObj->posX);
                     
                     double const kY = deltaY+kPosY;
-                    dCellY = (int)((double)(inObj->map->height-1)-kY);//(kY>0.0?kY+0.5:kY-0.5);
+                    dCellY = (int)((double)(inObj->map->height-1)-kY);
                     break;
                 }
                     
@@ -382,7 +382,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
             {
                 xForHit += 1;
             }
-            yForHit = (int)(kPosY/*+0.5*/); // MT_TODO: TEST: There is some bug (maybe here) causing wrong frame content, if player's Y position coordinate is non-integer!
+            yForHit = (int)kPosY;
             if(addY==1)
             {
                 yForHit += 1;
