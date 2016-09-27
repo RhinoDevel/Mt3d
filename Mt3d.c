@@ -273,7 +273,8 @@ void Mt3d_draw(struct Mt3d * const inObj)
             double deltaX = 0.0,
                 deltaY = 0.0,
                 m = 0.0,
-                b = 0.0;
+                b = 0.0,
+                countLen = -1.0; // Means unset.
             int xForHit = 0.0,
                 yForHit = 0.0,
                 addX = 0,
@@ -405,6 +406,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
                             colPix[1] = 0xFF;
                             colPix[0] = 0;
                         }
+                        countLen = inObj->e[pos];
                         break;
                     case CellType_floor_exit:
                         if(y<inObj->floorY[y])
@@ -419,6 +421,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
                             colPix[1] = 0xFF;
                             colPix[0] = 0xFF;   
                         }
+                        countLen = inObj->e[pos];
                         break;
 
                     case CellType_block_default: // (falls through)
@@ -492,6 +495,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
                                         colPix[1] = 0xFF;
                                         colPix[0] = 0;
                                     }
+                                    countLen = inObj->e[pos];
                                     break;
                                 case CellType_floor_exit:
                                     if(y<inObj->floorY[y])
@@ -506,6 +510,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
                                         colPix[1] = 0xFF;
                                         colPix[0] = 0xFF;   
                                     }
+                                    countLen = inObj->e[pos];
                                     break;
 
                                 default:
@@ -525,7 +530,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
                                 
                             colPix[2] = 0xFF;
                             colPix[1] = 0xFF;
-                            colPix[0] = 0;
+                            colPix[0] = 0xFF;
                             done = true;
                         }
                         else
@@ -552,9 +557,13 @@ void Mt3d_draw(struct Mt3d * const inObj)
                 }while(!done);
             }
 
-            double const maxVisible = 7.0, // In cell length.
-                maxDarkness = 0.8,
-                countLen = xCount==0?(double)yCount:yCount==0?(double)xCount:sqrt(pow((double)xCount, 2.0)+pow((double)yCount, 2.0)),
+            if(countLen==-1.0)
+            {
+                countLen = xCount==0?(double)yCount:yCount==0?(double)xCount:sqrt(pow((double)xCount, 2.0)+pow((double)yCount, 2.0));
+            }
+            
+            double const maxVisible = 6.0, // In cell length.
+                maxDarkness = 0.7,
                 brightness = (maxVisible-fmin(countLen, maxVisible))/maxVisible; // countLen 0 = 1.0, countLen maxVisible = 0.0;
             int const sub = (int)((maxDarkness*255.0)*(1.0-brightness)+0.5), // Rounds
                 r = (int)colPix[2]-sub,
