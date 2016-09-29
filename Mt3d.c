@@ -218,6 +218,50 @@ bool Mt3d_pos_leftOrRight(struct Mt3d * const inOutObj, bool inLeft)
     return Mt3d_pos_step(inOutObj, CALC_ANGLE_TO_POS(inOutObj->gamma+(inLeft?1.0:-1.0)*CALC_PI_MUL_0_5));
 }
 
+static inline void Mt3d_fill_pixel(struct Mt3d const * const inObj, enum CellType const inCellType, int const inY, uint8_t * const inOutPix)
+{
+    switch(inCellType)
+    {
+        case CellType_block_default:
+            inOutPix[2] = 0xFF;
+            inOutPix[1] = 0;
+            inOutPix[0] = 0;
+            break;
+        case CellType_floor_default:
+            if(inY<inObj->floorY[inY])
+            {
+                inOutPix[2] = 0;
+                inOutPix[1] = 0;
+                inOutPix[0] = 0xFF;
+            }
+            else
+            {
+                inOutPix[2] = 0;
+                inOutPix[1] = 0xFF;
+                inOutPix[0] = 0;
+            }
+            break;
+        case CellType_floor_exit:
+            if(inY<inObj->floorY[inY])
+            {
+                inOutPix[2] = 0xFF;
+                inOutPix[1] = 0xFF;
+                inOutPix[0] = 0;
+            }
+            else
+            {
+                inOutPix[2] = 0;
+                inOutPix[1] = 0xFF;
+                inOutPix[0] = 0xFF;   
+            }
+            break;
+
+        default:
+            assert(false);
+            break;
+    }   
+}
+
 void Mt3d_draw(struct Mt3d * const inObj)
 {
     int x = 0,
@@ -284,9 +328,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
                 cellX = -1,
                 cellY = -1,
                 dCellX = -1,
-                dCellY = -1,
-                xCount = 0,
-                yCount = 0;
+                dCellY = -1;
             bool done = false;
             int const pos = y*inObj->width+x;
             
@@ -392,45 +434,9 @@ void Mt3d_draw(struct Mt3d * const inObj)
             }
             
             if((cellX==dCellX)&&(cellY==dCellY))
-            {
-                switch((enum CellType)inObj->map->cells[cellY*inObj->map->width+cellX])
-                {
-                    case CellType_floor_default:
-                        if(y<inObj->floorY[y])
-                        {
-                            colPix[2] = 0;
-                            colPix[1] = 0;
-                            colPix[0] = 0xFF;
-                        }
-                        else
-                        {
-                            colPix[2] = 0;
-                            colPix[1] = 0xFF;
-                            colPix[0] = 0;
-                        }
-                        countLen = inObj->e[pos];
-                        break;
-                    case CellType_floor_exit:
-                        if(y<inObj->floorY[y])
-                        {
-                            colPix[2] = 0xFF;
-                            colPix[1] = 0xFF;
-                            colPix[0] = 0;
-                        }
-                        else
-                        {
-                            colPix[2] = 0;
-                            colPix[1] = 0xFF;
-                            colPix[0] = 0xFF;   
-                        }
-                        countLen = inObj->e[pos];
-                        break;
-
-                    case CellType_block_default: // (falls through)
-                    default:
-                        assert(false);
-                        break;
-                }
+            {            
+                countLen = inObj->e[pos];
+                Mt3d_fill_pixel(inObj, (enum CellType)inObj->map->cells[cellY*inObj->map->width+cellX], y, colPix);
             }
             else
             {
@@ -468,7 +474,6 @@ void Mt3d_draw(struct Mt3d * const inObj)
                         
                         cellY -= addY;
                         yForHit += addY;
-                        ++yCount;
                     }
                     if(nextX)
                     {
@@ -477,103 +482,59 @@ void Mt3d_draw(struct Mt3d * const inObj)
                         
                         cellX += addX;
                         xForHit += addX;
-                        ++xCount;
                     }
                     
                     if((cellX==dCellX)&&(cellY==dCellY))
                     {
+                        enum CellType const cellType = (enum CellType)inObj->map->cells[cellY*inObj->map->width+cellX];
+                        
+                        Mt3d_fill_pixel(inObj, cellType, y, colPix);
+                        
+                        switch(cellType)
                         {
-                            switch((enum CellType)inObj->map->cells[cellY*inObj->map->width+cellX])
-                            {
-                                case CellType_block_default:
-                                    colPix[2] = 0xFF;
-                                    colPix[1] = 0;
-                                    colPix[0] = 0;
-                                    countLen = sqrt(pow(kLastY-kPosY, 2.0)+pow(lastX-inObj->posX, 2.0))*inObj->e[pos]/inObj->d[pos];
-                                    break;
-                                case CellType_floor_default:
-                                    if(y<inObj->floorY[y])
-                                    {
-                                        colPix[2] = 0;
-                                        colPix[1] = 0;
-                                        colPix[0] = 0xFF;
-                                    }
-                                    else
-                                    {
-                                        colPix[2] = 0;
-                                        colPix[1] = 0xFF;
-                                        colPix[0] = 0;
-                                    }
-                                    countLen = inObj->e[pos];
-                                    break;
-                                case CellType_floor_exit:
-                                    if(y<inObj->floorY[y])
-                                    {
-                                        colPix[2] = 0xFF;
-                                        colPix[1] = 0xFF;
-                                        colPix[0] = 0;
-                                    }
-                                    else
-                                    {
-                                        colPix[2] = 0;
-                                        colPix[1] = 0xFF;
-                                        colPix[0] = 0xFF;   
-                                    }
-                                    countLen = inObj->e[pos];
-                                    break;
+                            case CellType_block_default:
+                                countLen = sqrt(pow(kLastY-kPosY, 2.0)+pow(lastX-inObj->posX, 2.0))*inObj->e[pos]/inObj->d[pos];
+                                break;
+                            case CellType_floor_default: // (falls through)
+                            case CellType_floor_exit:
+                                countLen = inObj->e[pos];
+                                break;
 
-                                default:
-                                    assert(false);
-                                    break;
-                            }
+                            default:
+                                assert(false);
+                                break;
                         }
-
                         done = true;
                     }
                     else
                     {
-                        if((cellX<0)||(cellY<0)||(cellX>=inObj->map->width)||(cellY>=inObj->map->height))
-                        {
-                            assert(false); // Shouldn't this be impossible?
-                            //Deb_line("x = %d, y = %d, zeta[x] = %f, sector[x] = %d, cellX = %d, cellY = %d.", x, y, zeta[x], sector[x], cellX, cellY)
-                                
-                            colPix[2] = 0xFF;
-                            colPix[1] = 0xFF;
-                            colPix[0] = 0xFF;
-                            done = true;
-                        }
-                        else
-                        {
-                            switch((enum CellType)inObj->map->cells[cellY*inObj->map->width+cellX])
-                            {
-                                case CellType_block_default:
-                                    colPix[2] = 0xFF;
-                                    colPix[1] = 0;
-                                    colPix[0] = 0;
-                                    countLen = sqrt(pow(kLastY-kPosY, 2.0)+pow(lastX-inObj->posX, 2.0))*inObj->e[pos]/inObj->d[pos];
-                                    done = true;
-                                    break;
-                                case CellType_floor_default:
-                                    break;
-                                case CellType_floor_exit:
-                                    break;
+                        assert(cellX>=0 && cellX<inObj->map->width);
+                        assert(cellY>=0 && cellY<inObj->map->height);
 
-                                default:
-                                    assert(false);
-                                    break;
-                            }
+                        switch((enum CellType)inObj->map->cells[cellY*inObj->map->width+cellX])
+                        {
+                            case CellType_block_default:
+                                Mt3d_fill_pixel(inObj, CellType_block_default, y, colPix); // Overdone
+                                countLen = sqrt(pow(kLastY-kPosY, 2.0)+pow(lastX-inObj->posX, 2.0))*inObj->e[pos]/inObj->d[pos];
+                                done = true;
+                                break;
+                                
+                            case CellType_floor_default: // (falls through)
+                            case CellType_floor_exit:
+                                break;
+
+                            default:
+                                assert(false);
+                                break;
                         }
                     }
                 }while(!done);
             }
 
-            if(countLen==-1.0)
-            {
-                countLen = xCount==0?(double)yCount:yCount==0?(double)xCount:sqrt(pow((double)xCount, 2.0)+pow((double)yCount, 2.0));
-            }
-            
-            double const maxVisible = 5.0, // In cell length.
-                maxDarkness = 0.8,
+            assert(countLen!=1.0);
+
+            double const maxVisible = 3.0, // In cell length.
+                maxDarkness = 1.0,
                 brightness = (maxVisible-fmin(countLen, maxVisible))/maxVisible; // countLen 0 = 1.0, countLen maxVisible = 0.0;
             int const sub = (int)((maxDarkness*255.0)*(1.0-brightness)+0.5), // Rounds
                 r = (int)colPix[2]-sub,
