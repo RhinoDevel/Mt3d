@@ -12,8 +12,6 @@
 #include "Sys.h"
 #include "Calc.h"
 
-//#define MT_DOUBLE_TO_INT_ROUND(x) ((int)(((x)<0.0)?((x)-0.5):((x)+0.5)))
-
 static const double CEILING_HEIGHT = 1.0; // 1.0 = Height equals length of one floor/ceiling cell.
 static const double PLAYER_STEP_LEN = 0.2; // Cell lengths.
 
@@ -139,63 +137,15 @@ static void fill(
     free(aX);
 }
 
-static bool Mt3d_pos_step(struct Mt3d * const inOutObj, double const inIota) // Iota: Complete angle in wanted direction (0 rad <= a < 2*PI rad).
+static bool posStep(struct Mt3d * const inOutObj, double const inIota) // Iota: Complete angle in wanted direction (0 rad <= a < 2*PI rad).
 {
-    double const MIN = 0.001;
-    int const zeroSector = (int)CALC_TO_DEG(inIota)/90; // Sector of Cartesian coordinate system from 0 to 3 instead of I, II, III, IV (counter-clockwise).
-    double kappa = -1.0;
     double addX = 0.0, // Cell length to add to X position.
         subY = 0.0, // Cell length to subtract from Y position.
         x = inOutObj->posX,
         y = inOutObj->posY;
     
-    switch(zeroSector)
-    {
-        case 0:
-            kappa = inIota;
-            if(kappa<MIN)
-            {
-                addX = PLAYER_STEP_LEN;
-                break;    
-            }
-            addX = PLAYER_STEP_LEN*cos(kappa);
-            subY = PLAYER_STEP_LEN*sin(kappa);
-            break;
-        case 1:
-            kappa = inIota-CALC_PI_MUL_0_5;
-            if(kappa<MIN)
-            {
-                subY = PLAYER_STEP_LEN;
-                break;    
-            }
-            addX = -PLAYER_STEP_LEN*sin(kappa);
-            subY = PLAYER_STEP_LEN*cos(kappa);
-            break;
-        case 2:
-            kappa = inIota-M_PI;
-            if(kappa<MIN)
-            {
-                addX = -PLAYER_STEP_LEN;
-                break;    
-            }
-            addX = -PLAYER_STEP_LEN*cos(kappa);
-            subY = -PLAYER_STEP_LEN*sin(kappa);
-            break;
-        case 3:
-            kappa = inIota-CALC_PI_MUL_1_5;
-            if(kappa<MIN)
-            {
-                subY = -PLAYER_STEP_LEN;
-                break;    
-            }
-            addX = PLAYER_STEP_LEN*sin(kappa);
-            subY = -PLAYER_STEP_LEN*cos(kappa);
-            break;
-            
-        default:
-            assert(false);
-            break;
-    }
+    Calc_fillDeltas(inIota, PLAYER_STEP_LEN, &addX, &subY);
+    
     x += addX;
     y -= subY; // Subtraction, because cell coordinate system starts on top, Cartesian coordinate system at bottom.
     
@@ -210,15 +160,15 @@ static bool Mt3d_pos_step(struct Mt3d * const inOutObj, double const inIota) // 
 
 bool Mt3d_pos_forwardOrBackward(struct Mt3d * const inOutObj, bool inForward)
 {
-    return Mt3d_pos_step(inOutObj, inForward?inOutObj->gamma:CALC_ANGLE_TO_POS(inOutObj->gamma-M_PI));
+    return posStep(inOutObj, inForward?inOutObj->gamma:CALC_ANGLE_TO_POS(inOutObj->gamma-M_PI));
 }
 
 bool Mt3d_pos_leftOrRight(struct Mt3d * const inOutObj, bool inLeft)
 {
-    return Mt3d_pos_step(inOutObj, CALC_ANGLE_TO_POS(inOutObj->gamma+(inLeft?1.0:-1.0)*CALC_PI_MUL_0_5));
+    return posStep(inOutObj, CALC_ANGLE_TO_POS(inOutObj->gamma+(inLeft?1.0:-1.0)*Calc_PiMul0_5));
 }
 
-static inline void Mt3d_fill_pixel(struct Mt3d const * const inObj, enum CellType const inCellType, int const inY, uint8_t * const inOutPix)
+static void fillPixel(struct Mt3d const * const inObj, enum CellType const inCellType, int const inY, uint8_t * const inOutPix)
 {
     switch(inCellType)
     {
@@ -280,7 +230,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
             zeta[pos] = inObj->eta[pos]+inObj->gamma;
             zeta[pos] = CALC_ANGLE_TO_POS(zeta[pos]);
 
-            sector[pos] = (unsigned char)(((int)CALC_TO_DEG(zeta[pos]))/90+1); // Integer division (truncates).
+            sector[pos] = (unsigned char)(Calc_getZeroSector(zeta[pos])+1); // Integer division (truncates).
             assert((sector[pos]>=1)&&(sector[pos]<=4));
 
             //Deb_line("y = %d, x = %d: zeta = %f degree, sector = %d", y, x, CALC_TO_DEG(zeta[x]), sector[x])
@@ -394,7 +344,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
                 {
                     assert(zeta[pos]!=3.0*M_PI/2.0); // MT_TODO: TEST: Implement special case!
                     
-                    double const theta = CALC_PI_MUL_2_0-zeta[pos];
+                    double const theta = Calc_PiMul2-zeta[pos];
                     assert(theta>0.0 && theta<M_PI/2.0);
                     
                     deltaY = -sin(theta)*inObj->d[pos];
@@ -436,7 +386,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
             if((cellX==dCellX)&&(cellY==dCellY))
             {            
                 countLen = inObj->e[pos];
-                Mt3d_fill_pixel(inObj, (enum CellType)inObj->map->cells[cellY*inObj->map->width+cellX], y, colPix);
+                fillPixel(inObj, (enum CellType)inObj->map->cells[cellY*inObj->map->width+cellX], y, colPix);
             }
             else
             {
@@ -488,7 +438,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
                     {
                         enum CellType const cellType = (enum CellType)inObj->map->cells[cellY*inObj->map->width+cellX];
                         
-                        Mt3d_fill_pixel(inObj, cellType, y, colPix);
+                        fillPixel(inObj, cellType, y, colPix);
                         
                         switch(cellType)
                         {
@@ -514,7 +464,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
                         switch((enum CellType)inObj->map->cells[cellY*inObj->map->width+cellX])
                         {
                             case CellType_block_default:
-                                Mt3d_fill_pixel(inObj, CellType_block_default, y, colPix); // Overdone
+                                fillPixel(inObj, CellType_block_default, y, colPix); // Overdone
                                 countLen = sqrt(pow(kLastY-kPosY, 2.0)+pow(lastX-inObj->posX, 2.0))*inObj->e[pos]/inObj->d[pos];
                                 done = true;
                                 break;
@@ -533,7 +483,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
 
             assert(countLen!=1.0);
 
-            double const maxVisible = 3.0, // In cell length.
+            double const maxVisible = 7.0, // In cell length.
                 maxDarkness = 1.0,
                 brightness = (maxVisible-fmin(countLen, maxVisible))/maxVisible; // countLen 0 = 1.0, countLen maxVisible = 0.0;
             int const sub = (int)((maxDarkness*255.0)*(1.0-brightness)+0.5), // Rounds

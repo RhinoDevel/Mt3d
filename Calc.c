@@ -1,7 +1,35 @@
 
 // MT, 2016sep11
 
+#include <stdbool.h>
+#include <stddef.h>
+#include <assert.h>
+
 #include "Calc.h"
+
+int Calc_getZeroSector(double const inAngle)
+{
+    assert(inAngle>=0.0&&inAngle<Calc_PiMul2);
+    
+    return (int)CALC_TO_DEG(inAngle)/90; // (integer division)
+}
+
+void Calc_fillDeltas(double const inAngle, double const inHypotenuse, double * const inOutDeltaX, double * const inOutDeltaY)
+{
+    assert(inOutDeltaX!=NULL && inOutDeltaY!=NULL);
+    
+    static double const xFactor[] = { 1.0, -1.0, -1.0, 1.0 }, // One entry for each sector as index to get correct sign.
+        yFactor[] = { 1.0, 1.0, -1.0, -1.0 }; // One entry for each sector as index to get correct sign.
+    int const zeroSector = Calc_getZeroSector(inAngle);
+    double const angle = inAngle-zeroSector*Calc_PiMul0_5,
+        opposite = inHypotenuse*sin(angle),
+        adjacent = sqrt(inHypotenuse*inHypotenuse-opposite*opposite),
+        zeroTwo = (double)((3-zeroSector)%2), // 1.0 for sectors 0 and 2, zero otherwise.
+        oneThree = (double)(zeroSector%2); // 1.0 for sectors 1 and 3, zero otherwise.
+    
+    *inOutDeltaX = xFactor[zeroSector]*(zeroTwo*adjacent+oneThree*opposite);
+    *inOutDeltaY = yFactor[zeroSector]*(zeroTwo*opposite+oneThree*adjacent);
+}
 
 double Calc_getTriangleSideA(double const inGammaRad, double const inCleftOfAltitudeC, double const inCrightOfAltitudeC)
 {
