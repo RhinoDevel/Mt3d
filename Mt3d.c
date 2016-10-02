@@ -214,29 +214,6 @@ static void fillPixel(struct Mt3d const * const inObj, enum CellType const inCel
 
 void Mt3d_draw(struct Mt3d * const inObj)
 {
-    int x = 0,
-        y = 0;
-    double * const zeta = malloc(inObj->height*inObj->width*sizeof *zeta);            // MT_TODO: TEST: Move to Mt3d object creation/deletion!
-    unsigned char * const sector = malloc(inObj->height*inObj->width*sizeof *sector); //
-    assert(zeta!=NULL);
-    assert(sector!=NULL);
-    
-    for(y = 0;y<inObj->height;++y)
-    {
-        for(x = 0;x<inObj->width;++x)
-        {
-            int const pos = y*inObj->width+x;
-            
-            zeta[pos] = inObj->eta[pos]+inObj->gamma;
-            zeta[pos] = CALC_ANGLE_TO_POS(zeta[pos]);
-
-            sector[pos] = (unsigned char)(Calc_getZeroSector(zeta[pos])+1); // Integer division (truncates).
-            assert((sector[pos]>=1)&&(sector[pos]<=4));
-
-            //Deb_line("(%d,%d): Zeta = %f deg / Sector %d.", x, y, CALC_TO_DEG(zeta[x]), sector[x])
-        }
-    }
-
     // Cell coordinates     Cartesian coordinates
     //
     //  00000000001          00000000001
@@ -256,24 +233,25 @@ void Mt3d_draw(struct Mt3d * const inObj)
     
     double const kPosY = ((double)(inObj->map->height-1))-inObj->posY;
     
-    //Deb_line("kPosY = %f", kPosY)
-    
     for(int y = 0;y<inObj->height;++y)
     {
         uint32_t * const rowPix = (uint32_t*)inObj->pixels+y*inObj->width;
         
-        for(x = 0;x<inObj->width;++x)
+        for(int x = 0;x<inObj->width;++x)
         {   
             double deltaX = 0.0,
                 deltaY = 0.0,
                 countLen = -1.0; // Means unset.
             int cellX = (int)inObj->posX,
-                cellY = (int)inObj->posY; // (truncates)
-            bool done = false;
+                cellY = (int)inObj->posY;
             
             int const pos = y*inObj->width+x;
             
-            Calc_fillDeltas(zeta[pos], inObj->d[pos], &deltaX, &deltaY);
+            {
+                double const zetaUnchecked = inObj->eta[pos]+inObj->gamma; // (might be out of expected range, see usage below)
+
+                Calc_fillDeltas(CALC_ANGLE_TO_POS(zetaUnchecked), inObj->d[pos], &deltaX, &deltaY);
+            }
             
             assert(deltaX!=0.0); // MT_TODO: TEST: Implement special case! 
             
@@ -292,6 +270,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
                 int const addX = CALC_SIGN_FROM_DOUBLE(deltaX),
                     addY = CALC_SIGN_FROM_DOUBLE(deltaY);
                 
+                bool done = false;
                 int xForHit = cellX+(int)(addX>0),
                     yForHit = (int)kPosY+(int)(addY>0);
                 double lastX = inObj->posX,
@@ -393,20 +372,23 @@ void Mt3d_draw(struct Mt3d * const inObj)
                 }while(!done);
             }
 
-            assert(countLen!=-1.0);
+            // Set brightness based on map constants and line length from player:
+            //
+            {
+                assert(countLen!=-1.0);
 
-            double const brightness = (inObj->map->maxVisible-fmin(countLen, inObj->map->maxVisible))/inObj->map->maxVisible; // countLen 0 = 1.0, countLen maxVisible = 0.0;
-            int const sub = (int)((inObj->map->maxDarkness*255.0)*(1.0-brightness)+0.5), // Rounds
-                r = (int)colPix[2]-sub,
-                g = (int)colPix[1]-sub,
-                blue = (int)colPix[0]-sub;
-            colPix[2] = r>0?(unsigned char)r:0;
-            colPix[1] = g>0?(unsigned char)g:0;
-            colPix[0] = blue>0?(unsigned char)blue:0;
+                double const brightness = (inObj->map->maxVisible-fmin(countLen, inObj->map->maxVisible))/inObj->map->maxVisible; // countLen 0 = 1.0, countLen maxVisible = 0.0;
+                int const sub = (int)((inObj->map->maxDarkness*255.0)*(1.0-brightness)+0.5), // Rounds
+                    r = (int)colPix[2]-sub,
+                    g = (int)colPix[1]-sub,
+                    blue = (int)colPix[0]-sub;
+
+                colPix[2] = r>0?(unsigned char)r:0;
+                colPix[1] = g>0?(unsigned char)g:0;
+                colPix[0] = blue>0?(unsigned char)blue:0;
+            }
         }
     }
-    
-    free(zeta);
 }
 
 void Mt3d_delete(struct Mt3d * const inObj)
