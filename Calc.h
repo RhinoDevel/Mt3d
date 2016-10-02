@@ -18,6 +18,7 @@ static double const Calc_PiMul0_5 = 0.5*M_PI; // 90 degree in radian.
 #define CALC_TO_DEG(x) (((x)*180.0)/M_PI) // Converts radian to degree.
 #define CALC_ANGLE_TO_POS(x) ((x)<0.0?Calc_PiMul2+(x):(x)>=Calc_PiMul2?(x)-Calc_PiMul2:(x)) // Given angle, or positive equivalent, if negative angle given.
 
+#define CALC_SIGN_FROM_DOUBLE(x) ((int)(0.0<(x))-(int)((x)<0.0))
 #define CALC_DOUBLE_TO_INT_ROUND(x) ((int)(((x)<0.0)?((x)-0.5):((x)+0.5)))
     
 /** Return sector of Cartesian coordinate system from 0 to 3 instead of I, II, III, IV (counter-clockwise).
