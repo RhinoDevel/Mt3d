@@ -42,7 +42,7 @@ static void fillCells(struct Map * const inOutMap)
     }
     
     Map_set(inOutMap, HEIGHT/2+1, WIDTH/2+1, CellType_block_default);
-    //Map_set(inOutMap, HEIGHT/2-1, WIDTH/2-1, CellType_floor_exit);
+    Map_set(inOutMap, HEIGHT/2-1, WIDTH/2-1, CellType_floor_exit);
 }
 
 struct Map * MapSample_create()
