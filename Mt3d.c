@@ -266,130 +266,42 @@ void Mt3d_draw(struct Mt3d * const inObj)
         {   
             double deltaX = 0.0,
                 deltaY = 0.0,
-                m = 0.0,
-                b = 0.0,
-                countLen = -1.0, // Means unset.
-                lastX = inObj->posX,
-                kLastY = kPosY;
-            int xForHit = 0.0,
-                yForHit = 0.0,
-                addX = 0,
-                addY = 0,
-                cellX = -1,
-                cellY = -1,
-                dCellX = -1,
-                dCellY = -1;
+                countLen = -1.0; // Means unset.
+            int cellX = (int)inObj->posX,
+                cellY = (int)inObj->posY; // (truncates)
             bool done = false;
+            
             int const pos = y*inObj->width+x;
+            
+            Calc_fillDeltas(zeta[pos], inObj->d[pos], &deltaX, &deltaY);
+            
+            assert(deltaX!=0.0); // MT_TODO: TEST: Implement special case! 
             
             uint8_t * const colPix = (uint8_t*)(rowPix+x);
             
-            switch(sector[pos])
-            {
-                case 1:
-                {
-                    assert(zeta[pos]!=0.0); // MT_TODO: TEST: Implement special case!
-                    
-                    double const theta = M_PI/2.0-zeta[pos];
-                    assert(theta>0.0 && theta<M_PI/2.0);
-                    
-                    deltaY = cos(theta)*inObj->d[pos];
-                    assert(deltaY>0.0);
-                    deltaX = sin(theta)*inObj->d[pos];
-                    addX = 1;
-                    addY = 1;
-                    dCellX = (int)(deltaX+inObj->posX);
-                    
-                    double const kY = deltaY+kPosY;
-                    dCellY = (int)((double)(inObj->map->height-1)-kY);               
-                    break;
-                }
-                case 2:
-                {
-                    assert(zeta[pos]!=M_PI/2.0); // MT_TODO: TEST: Implement special case!
-                    
-                    double const theta = M_PI-zeta[pos];
-                    assert(theta>0.0 && theta<M_PI/2.0);
-                    
-                    deltaY = -sin(theta)*inObj->d[pos];
-                    assert(deltaY<0.0);
-                    deltaX = cos(theta)*inObj->d[pos];
-                    addX = -1;
-                    addY = 1;
-                    dCellX = (int)(inObj->posX-deltaX);
-                    
-                    double const kY = kPosY-deltaY;
-                    dCellY = (int)((double)(inObj->map->height-1)-kY);
-                    break;
-                }
-                case 3:
-                {
-                    assert(zeta[pos]!=M_PI); // MT_TODO: TEST: Implement special case!
-                    
-                    double const theta = 3.0*M_PI/2.0-zeta[pos];
-                    assert(theta>0.0 && theta<M_PI/2.0);
-                    
-                    deltaY = cos(theta)*inObj->d[pos];
-                    assert(deltaY>0.0);
-                    deltaX = sin(theta)*inObj->d[pos];
-                    addX = -1;
-                    addY = -1;
-                    dCellX = (int)(inObj->posX-deltaX);
-                    
-                    double const kY = kPosY-deltaY;
-                    dCellY = (int)((double)(inObj->map->height-1)-kY);
-                    break;
-                }
-                case 4:
-                {
-                    assert(zeta[pos]!=3.0*M_PI/2.0); // MT_TODO: TEST: Implement special case!
-                    
-                    double const theta = Calc_PiMul2-zeta[pos];
-                    assert(theta>0.0 && theta<M_PI/2.0);
-                    
-                    deltaY = -sin(theta)*inObj->d[pos];
-                    assert(deltaY<0.0);
-                    deltaX = cos(theta)*inObj->d[pos];
-                    addX = 1;
-                    addY = -1;
-                    dCellX = (int)(deltaX+inObj->posX);
-                    
-                    double const kY = deltaY+kPosY;
-                    dCellY = (int)((double)(inObj->map->height-1)-kY);
-                    break;
-                }
-                    
-                default:
-                    assert(false);
-                    break;
-            }
+            int const dCellX = (int)(deltaX+inObj->posX),
+                dCellY = (int)((double)(inObj->map->height-1)-(deltaY+kPosY)); // Cartesian Y to cell Y coordinate conversion.
             
-            assert(deltaX>0.0);
-            m = deltaY/deltaX;
-               
-            b = kPosY-m*inObj->posX;
-            
-            cellX = (int)inObj->posX;
-            cellY = (int)inObj->posY;
-           
-            xForHit = (int)inObj->posX;
-            if(addX==1)
-            {
-                xForHit += 1;
-            }
-            yForHit = (int)kPosY;
-            if(addY==1)
-            {
-                yForHit += 1;
-            }
-            
-            if((cellX==dCellX)&&(cellY==dCellY))
+            if((cellX==dCellX)&&(cellY==dCellY)) // Line/"ray" reaches floor or ceiling in current/player's cell.
             {            
                 countLen = inObj->e[pos];
                 fillPixel(inObj, (enum CellType)inObj->map->cells[cellY*inObj->map->width+cellX], y, colPix);
             }
             else
             {
+                int const addX = CALC_SIGN_FROM_DOUBLE(deltaX),
+                    addY = CALC_SIGN_FROM_DOUBLE(deltaY);
+                
+                int xForHit = cellX+(int)(addX>0),
+                    yForHit = (int)kPosY+(int)(addY>0);
+                double lastX = inObj->posX,
+                    kLastY = kPosY;
+                
+                // Values to represent line in Slope-intercept form:
+                //
+                double const m = deltaY/deltaX, // Slope
+                    b = kPosY-m*inObj->posX; // Y-intercept
+                
                 do
                 {   
                     double const hitX = (((double)yForHit)-b)/m,
@@ -481,11 +393,11 @@ void Mt3d_draw(struct Mt3d * const inObj)
                 }while(!done);
             }
 
-            assert(countLen!=1.0);
+            assert(countLen!=-1.0);
 
-            double const maxVisible = 7.0, // In cell length.
-                maxDarkness = 1.0,
-                brightness = (maxVisible-fmin(countLen, maxVisible))/maxVisible; // countLen 0 = 1.0, countLen maxVisible = 0.0;
+            static double const maxVisible = 7.0, // In cell length.
+                maxDarkness = 1.0;
+            double const brightness = (maxVisible-fmin(countLen, maxVisible))/maxVisible; // countLen 0 = 1.0, countLen maxVisible = 0.0;
             int const sub = (int)((maxDarkness*255.0)*(1.0-brightness)+0.5), // Rounds
                 r = (int)colPix[2]-sub,
                 g = (int)colPix[1]-sub,
