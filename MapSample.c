@@ -15,7 +15,7 @@ static int const HEIGHT = 9;
 static double const POS_X = 4.123;
 static double const POS_Y = 5.321;
 
-static double const GAMMA = CALC_TO_RAD(90.0);
+static double const GAMMA = CALC_TO_RAD(135.0);
 
 static void fillCells(struct Map * const inOutMap)
 {
