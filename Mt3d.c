@@ -233,7 +233,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
             sector[pos] = (unsigned char)(Calc_getZeroSector(zeta[pos])+1); // Integer division (truncates).
             assert((sector[pos]>=1)&&(sector[pos]<=4));
 
-            //Deb_line("y = %d, x = %d: zeta = %f degree, sector = %d", y, x, CALC_TO_DEG(zeta[x]), sector[x])
+            //Deb_line("(%d,%d): Zeta = %f deg / Sector %d.", x, y, CALC_TO_DEG(zeta[x]), sector[x])
         }
     }
 
