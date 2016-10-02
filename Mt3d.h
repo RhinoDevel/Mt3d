@@ -36,7 +36,7 @@ struct Mt3d
     double /*const*/ * const e; // One e value for each (x,y) pixel coordinate (in cell lengths).
     int /*const*/ * const floorY; // First y value that has "an e" reaching the floor and not the ceiling for each x.
     
-    double /*const*/ * const eta; // One value for each (x/y) pixel coordinate (in degree).
+    double /*const*/ * const eta; // One value for each (x/y) pixel coordinate (in radian).
     
     // **********************
     // *** CURRENT VALUES ***
