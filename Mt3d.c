@@ -395,10 +395,8 @@ void Mt3d_draw(struct Mt3d * const inObj)
 
             assert(countLen!=-1.0);
 
-            static double const maxVisible = 7.0, // In cell length.
-                maxDarkness = 1.0;
-            double const brightness = (maxVisible-fmin(countLen, maxVisible))/maxVisible; // countLen 0 = 1.0, countLen maxVisible = 0.0;
-            int const sub = (int)((maxDarkness*255.0)*(1.0-brightness)+0.5), // Rounds
+            double const brightness = (inObj->map->maxVisible-fmin(countLen, inObj->map->maxVisible))/inObj->map->maxVisible; // countLen 0 = 1.0, countLen maxVisible = 0.0;
+            int const sub = (int)((inObj->map->maxDarkness*255.0)*(1.0-brightness)+0.5), // Rounds
                 r = (int)colPix[2]-sub,
                 g = (int)colPix[1]-sub,
                 blue = (int)colPix[0]-sub;

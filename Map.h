@@ -22,6 +22,9 @@ struct Map
     
     double const gamma; // Player's start direction of view (angle in radian).
     
+    double const maxVisible; // Maximum visibility in cell length.
+    double const maxDarkness; // Maximum darkness 
+    
     unsigned char const * const cells;
 };
 

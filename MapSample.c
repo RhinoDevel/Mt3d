@@ -17,6 +17,9 @@ static double const POS_Y = 5.321;
 
 static double const GAMMA = CALC_TO_RAD(135.0);
 
+static double const MAX_VISIBLE = 7.0;
+static double const MAX_DARKNESS = 0.95;
+
 static void fillCells(struct Map * const inOutMap)
 {
     unsigned char * const cells = (unsigned char *)(inOutMap->cells);
@@ -39,7 +42,7 @@ static void fillCells(struct Map * const inOutMap)
     }
     
     Map_set(inOutMap, HEIGHT/2+1, WIDTH/2+1, CellType_block_default);
-    Map_set(inOutMap, HEIGHT/2-1, WIDTH/2-1, CellType_floor_exit);
+    //Map_set(inOutMap, HEIGHT/2-1, WIDTH/2-1, CellType_floor_exit);
 }
 
 struct Map * MapSample_create()
@@ -59,6 +62,9 @@ struct Map * MapSample_create()
         .posY = POS_Y,
             
         .gamma = GAMMA,
+            
+        .maxVisible = MAX_VISIBLE,
+        .maxDarkness = MAX_DARKNESS,
             
         .cells = cells
     };
