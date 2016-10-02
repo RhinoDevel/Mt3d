@@ -19,7 +19,7 @@
 
 static int const WIDTH = 320;
 static int const HEIGHT = 240;
-static double const SCALE_FACTOR = 4.0;
+static double const SCALE_FACTOR = 2.0;
 static double const ALPHA = CALC_TO_RAD(45.0);
 static double const ALPHA_MIN = CALC_TO_RAD(20.0);
 static double const ALPHA_MAX = CALC_TO_RAD(160.0);
@@ -28,7 +28,6 @@ static double const H = 0.3; // As part of room height (e.g. 0.5 = 50% of room h
 static double const H_MIN = 0.1;
 static double const H_MAX = 0.9;
 static double const H_STEP = 0.1;
-static double const GAMMA_STEP = CALC_TO_RAD(5.0);
 
 static struct Mt3d * o = NULL;
 
@@ -64,26 +63,24 @@ static gboolean on_key_press(GtkWidget* widget, GdkEventKey* event, gpointer use
     switch (event->keyval)
     {
         case GDK_KEY_a:
-            o->gamma = o->gamma+GAMMA_STEP;
-            retVal = TRUE;
+            retVal = Mt3d_ang_leftOrRight(o, true); // (implicit "cast")
             break;
         case GDK_KEY_d:
-            o->gamma = o->gamma-GAMMA_STEP;
-            retVal = TRUE;
+            retVal = Mt3d_ang_leftOrRight(o, false); // (implicit "cast")
             break;
             
         case GDK_KEY_w:
-            retVal = Mt3d_pos_forwardOrBackward(o, true);
+            retVal = Mt3d_pos_forwardOrBackward(o, true); // (implicit "cast")
             break;
         case GDK_KEY_s:
-            retVal = Mt3d_pos_forwardOrBackward(o, false);
+            retVal = Mt3d_pos_forwardOrBackward(o, false); // (implicit "cast")
             break;
             
         case GDK_KEY_q:
-            retVal = Mt3d_pos_leftOrRight(o, true);
+            retVal = Mt3d_pos_leftOrRight(o, true); // (implicit "cast")
             break;
         case GDK_KEY_e:
-            retVal = Mt3d_pos_leftOrRight(o, false);
+            retVal = Mt3d_pos_leftOrRight(o, false); // (implicit "cast")
             break;
            
         case GDK_KEY_l:
@@ -145,8 +142,6 @@ static gboolean on_key_press(GtkWidget* widget, GdkEventKey* event, gpointer use
     }
     if(retVal==TRUE)
     {
-        o->gamma = CALC_ANGLE_TO_POS(o->gamma);
-        
         cairo_surface_flush (glob.image);
         Mt3d_draw(o);
         cairo_surface_mark_dirty(glob.image);
@@ -154,7 +149,7 @@ static gboolean on_key_press(GtkWidget* widget, GdkEventKey* event, gpointer use
 
         int const playerX = (int)o->posX,
             playerY = (int)o->posY;
-      
+        
         Map_print(o->map, &playerX, &playerY);
     }
 

@@ -53,6 +53,7 @@ struct Mt3d
     unsigned char * pixels; // Does NOT take ownership.
 };
 
+bool Mt3d_ang_leftOrRight(struct Mt3d * const inOutObj, bool inLeft);
 bool Mt3d_pos_forwardOrBackward(struct Mt3d * const inOutObj, bool inForward);
 bool Mt3d_pos_leftOrRight(struct Mt3d * const inOutObj, bool inLeft);
 void Mt3d_draw(struct Mt3d * const inObj);

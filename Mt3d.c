@@ -14,6 +14,7 @@
 
 static const double CEILING_HEIGHT = 1.0; // 1.0 = Height equals length of one floor/ceiling cell.
 static const double PLAYER_STEP_LEN = 0.2; // Cell lengths.
+static double const PLAYER_ANG_STEP = CALC_TO_RAD(5.0);
 
 static void fill(
     int const inWidth,
@@ -155,6 +156,21 @@ static bool posStep(struct Mt3d * const inOutObj, double const inIota) // Iota: 
     }
     inOutObj->posX = x;
     inOutObj->posY = y; 
+    return true;
+}
+
+bool Mt3d_ang_leftOrRight(struct Mt3d * const inOutObj, bool inLeft)
+{
+    if(inLeft)
+    {
+        inOutObj->gamma += PLAYER_ANG_STEP;
+    }
+    else
+    {
+        inOutObj->gamma -= PLAYER_ANG_STEP;
+    }
+    inOutObj->gamma = CALC_ANGLE_TO_POS(inOutObj->gamma);
+    
     return true;
 }
 
