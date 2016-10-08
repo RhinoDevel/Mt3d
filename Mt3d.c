@@ -185,7 +185,7 @@ bool Mt3d_pos_leftOrRight(struct Mt3d * const inOutObj, bool inLeft)
     return posStep(inOutObj, CALC_ANGLE_TO_POS(inOutObj->gamma+(inLeft?1.0:-1.0)*M_PI_2));
 }
 
-static void fillPixel(struct Mt3d const * const inObj, enum CellType const inCellType, int const inY, uint8_t * const inOutPix)
+static void fillPixel(struct Mt3d const * const inObj, enum CellType const inCellType, int const inX, int const inY, uint8_t * const inOutPix)
 {
     switch(inCellType)
     {
@@ -195,7 +195,7 @@ static void fillPixel(struct Mt3d const * const inObj, enum CellType const inCel
             inOutPix[0] = 0;
             break;
         case CellType_floor_default:
-            if(inY<inObj->floorY[inY])
+            if(inY<inObj->floorY[inX])
             {
                 inOutPix[2] = 0;
                 inOutPix[1] = 0;
@@ -209,7 +209,7 @@ static void fillPixel(struct Mt3d const * const inObj, enum CellType const inCel
             }
             break;
         case CellType_floor_exit:
-            if(inY<inObj->floorY[inY])
+            if(inY<inObj->floorY[inX])
             {
                 inOutPix[2] = 0xFF;
                 inOutPix[1] = 0xFF;
@@ -274,13 +274,15 @@ void Mt3d_draw(struct Mt3d * const inObj)
             
             uint8_t * const colPix = (uint8_t*)(rowPix+x);
             
+            // Get coordinates of cell where the line/"ray" reaches either floor or ceiling:
+            //
             int const dCellX = (int)(deltaX+inObj->posX),
                 dCellY = (int)((double)(inObj->map->height-1)-(deltaY+kPosY)); // Cartesian Y to cell Y coordinate conversion.
             
             if((cellX==dCellX)&&(cellY==dCellY)) // Line/"ray" reaches floor or ceiling in current/player's cell.
             {            
                 countLen = inObj->e[pos];
-                fillPixel(inObj, (enum CellType)inObj->map->cells[cellY*inObj->map->width+cellX], y, colPix);
+                fillPixel(inObj, (enum CellType)inObj->map->cells[cellY*inObj->map->width+cellX], x, y, colPix);
             }
             else
             {
@@ -289,9 +291,12 @@ void Mt3d_draw(struct Mt3d * const inObj)
                 
                 bool done = false;
                 int xForHit = cellX+(int)(addX>0),
-                    yForHit = (int)kPosY+(int)(addY>0);
+                    yForHit = (int)kPosY+(int)(addY>0); // (Cartesian Y coordinate)
+                
+                // Store last reached coordinates for brightness (and more) calculations:
+                //
                 double lastX = inObj->posX,
-                    kLastY = kPosY;
+                    kLastY = kPosY; // (Cartesian Y coordinate)
                 
                 // Values to represent line in Slope-intercept form:
                 //
@@ -327,6 +332,8 @@ void Mt3d_draw(struct Mt3d * const inObj)
 
                     if(nextY)
                     {
+                        // Update last reached coordinates:
+                        //
                         lastX = hitX;
                         kLastY = yForHit;
                         
@@ -335,6 +342,8 @@ void Mt3d_draw(struct Mt3d * const inObj)
                     }
                     if(nextX)
                     {
+                        // Update last reached coordinates:
+                        //
                         lastX = xForHit;
                         kLastY = hitY;
                         
@@ -346,16 +355,17 @@ void Mt3d_draw(struct Mt3d * const inObj)
                     {
                         enum CellType const cellType = (enum CellType)inObj->map->cells[cellY*inObj->map->width+cellX];
                         
-                        fillPixel(inObj, cellType, y, colPix);
+                        fillPixel(inObj, cellType, x, y, colPix);
                         
                         switch(cellType)
                         {
                             case CellType_block_default:
                             {
                                 double const diffY = kLastY-kPosY,
-                                    diffX = lastX-inObj->posX;
+                                    diffX = lastX-inObj->posX,
+                                    diffXY = sqrt(diffY*diffY+diffX*diffX);
                                 
-                                countLen = sqrt(diffY*diffY+diffX*diffX)*inObj->e[pos]/inObj->d[pos];
+                                countLen = diffXY*inObj->e[pos]/inObj->d[pos];
                                 break;
                             }
                             case CellType_floor_default: // (falls through)
@@ -378,12 +388,13 @@ void Mt3d_draw(struct Mt3d * const inObj)
                         {
                             case CellType_block_default:
                             {
-                                fillPixel(inObj, CellType_block_default, y, colPix); // Overdone
+                                fillPixel(inObj, CellType_block_default, x, y, colPix); // Overdone
                                 
                                 double const diffY = kLastY-kPosY,
-                                    diffX = lastX-inObj->posX;
+                                    diffX = lastX-inObj->posX,
+                                    diffXY = sqrt(diffY*diffY+diffX*diffX);
                                 
-                                countLen = sqrt(diffY*diffY+diffX*diffX)*inObj->e[pos]/inObj->d[pos];
+                                countLen = diffXY*inObj->e[pos]/inObj->d[pos];
                                 done = true;
                                 break;
                             }
