@@ -18,8 +18,8 @@
 #include <gdk/gdkkeysyms.h>
 
 static int const WIDTH = 320;
-static int const HEIGHT = 240;
-static double const SCALE_FACTOR = 2.0;
+static int const HEIGHT = 200;
+static double const SCALE_FACTOR = 4.0;
 static double const ALPHA = CALC_TO_RAD(45.0);
 static double const ALPHA_MIN = CALC_TO_RAD(20.0);
 static double const ALPHA_MAX = CALC_TO_RAD(160.0);
@@ -40,6 +40,19 @@ static struct
 static double getBeta(double const inAlpha)
 {
     return 2.0*atan((double)HEIGHT*tan(inAlpha/2.0)/(double)WIDTH);
+}
+
+static void drawFrame()
+{
+    cairo_surface_flush (glob.image);
+    Mt3d_draw(o);
+    cairo_surface_mark_dirty(glob.image);
+    gtk_widget_queue_draw(glob.darea);
+
+    int const playerX = (int)o->posX,
+        playerY = (int)o->posY;
+
+    Map_print(o->map, &playerX, &playerY);
 }
 
 static void do_drawing(cairo_t* cr)
@@ -142,15 +155,7 @@ static gboolean on_key_press(GtkWidget* widget, GdkEventKey* event, gpointer use
     }
     if(retVal==TRUE)
     {
-        cairo_surface_flush (glob.image);
-        Mt3d_draw(o);
-        cairo_surface_mark_dirty(glob.image);
-        gtk_widget_queue_draw(glob.darea);
-
-        int const playerX = (int)o->posX,
-            playerY = (int)o->posY;
-        
-        Map_print(o->map, &playerX, &playerY);
+        drawFrame();
     }
 
     return retVal; 
@@ -202,6 +207,7 @@ int main(int argc, char *argv[])
     gtk_window_set_default_size(GTK_WINDOW(window), scaledWidth+30, scaledHeight+30); 
     gtk_window_set_title(GTK_WINDOW(window), "MT 3D");
     gtk_widget_show_all(window);
+    drawFrame();
     gtk_main();
     cairo_surface_destroy(glob.image);
     
