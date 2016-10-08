@@ -44,15 +44,15 @@ static void fill(
         xMiddle = (double)(inWidth-1)/2.0,
         sYmiddle = xMiddle/sin(inAlpha/2.0),
         sXmiddle = yMiddle/sin(inBeta/2.0),
-        sYmiddleSqr = pow(sYmiddle, 2.0),
-        sXmiddleSqr = pow(sXmiddle, 2.0),
+        sYmiddleSqr = sYmiddle*sYmiddle,
+        sXmiddleSqr = sXmiddle*sXmiddle,
         floorToEye = inH*CEILING_HEIGHT, // (cell lengths)
         ceilingToEye = CEILING_HEIGHT-floorToEye; // (cell lengths)
     
     for(x = 0;x<inWidth;++x)
     {
-        double const dX = (double)x,
-            sX = sqrt(pow(xMiddle-dX, 2.0)+sXmiddleSqr);
+        double const diff = xMiddle-(double)x,
+            sX = sqrt(diff*diff+sXmiddleSqr);
         
         betaTopX[x] = asin(yMiddle/sX);
         assert(betaTopX[x]>0.0);
@@ -64,7 +64,8 @@ static void fill(
     for(y = 0;y<inHeight;++y)
     {
         double const dY = (double)y,
-            sY = sqrt(pow(yMiddle-dY, 2.0)+sYmiddleSqr),
+            diff = yMiddle-dY,
+            sY = sqrt(diff*diff+sYmiddleSqr),
             alphaLeftY = asin(xMiddle/sY); // To hold alphaX/2.
         double delta = 0.0;
 
@@ -181,7 +182,7 @@ bool Mt3d_pos_forwardOrBackward(struct Mt3d * const inOutObj, bool inForward)
 
 bool Mt3d_pos_leftOrRight(struct Mt3d * const inOutObj, bool inLeft)
 {
-    return posStep(inOutObj, CALC_ANGLE_TO_POS(inOutObj->gamma+(inLeft?1.0:-1.0)*Calc_PiMul0_5));
+    return posStep(inOutObj, CALC_ANGLE_TO_POS(inOutObj->gamma+(inLeft?1.0:-1.0)*M_PI_2));
 }
 
 static void fillPixel(struct Mt3d const * const inObj, enum CellType const inCellType, int const inY, uint8_t * const inOutPix)
@@ -350,8 +351,13 @@ void Mt3d_draw(struct Mt3d * const inObj)
                         switch(cellType)
                         {
                             case CellType_block_default:
-                                countLen = sqrt(pow(kLastY-kPosY, 2.0)+pow(lastX-inObj->posX, 2.0))*inObj->e[pos]/inObj->d[pos];
+                            {
+                                double const diffY = kLastY-kPosY,
+                                    diffX = lastX-inObj->posX;
+                                
+                                countLen = sqrt(diffY*diffY+diffX*diffX)*inObj->e[pos]/inObj->d[pos];
                                 break;
+                            }
                             case CellType_floor_default: // (falls through)
                             case CellType_floor_exit:
                                 countLen = inObj->e[pos];
@@ -371,10 +377,16 @@ void Mt3d_draw(struct Mt3d * const inObj)
                         switch((enum CellType)inObj->map->cells[cellY*inObj->map->width+cellX])
                         {
                             case CellType_block_default:
+                            {
                                 fillPixel(inObj, CellType_block_default, y, colPix); // Overdone
-                                countLen = sqrt(pow(kLastY-kPosY, 2.0)+pow(lastX-inObj->posX, 2.0))*inObj->e[pos]/inObj->d[pos];
+                                
+                                double const diffY = kLastY-kPosY,
+                                    diffX = lastX-inObj->posX;
+                                
+                                countLen = sqrt(diffY*diffY+diffX*diffX)*inObj->e[pos]/inObj->d[pos];
                                 done = true;
                                 break;
+                            }
                                 
                             case CellType_floor_default: // (falls through)
                             case CellType_floor_exit:
