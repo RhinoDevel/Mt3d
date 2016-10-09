@@ -279,7 +279,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
             int const dCellX = (int)(deltaX+inObj->posX),
                 dCellY = (int)((double)(inObj->map->height-1)-(deltaY+kPosY)); // Cartesian Y to cell Y coordinate conversion.
             
-            if((cellX==dCellX)&&(cellY==dCellY)) // Line/"ray" reaches floor or ceiling in current/player's cell.
+            if((cellX==dCellX)&&(cellY==dCellY)) // Line/"ray" hits floor or ceiling in current/player's cell.
             {            
                 countLen = inObj->e[pos];
                 fillPixel(inObj, (enum CellType)inObj->map->cells[cellY*inObj->map->width+cellX], x, y, colPix);
@@ -289,7 +289,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
                 int const addX = CALC_SIGN_FROM_DOUBLE(deltaX),
                     addY = CALC_SIGN_FROM_DOUBLE(deltaY);
                 
-                bool done = false;
+                bool noHit = true;
                 int xForHit = cellX+(int)(addX>0),
                     yForHit = (int)kPosY+(int)(addY>0); // (Cartesian Y coordinate)
                 
@@ -351,64 +351,44 @@ void Mt3d_draw(struct Mt3d * const inObj)
                         xForHit += addX;
                     }
                     
-                    if((cellX==dCellX)&&(cellY==dCellY))
+                    assert(cellX>=0 && cellX<inObj->map->width);
+                    assert(cellY>=0 && cellY<inObj->map->height);
+                    
+                    enum CellType const cellType = (enum CellType)inObj->map->cells[cellY*inObj->map->width+cellX];
+                    
+                    noHit = cellX!=dCellX || cellY!=dCellY; // noHit = false => Last cell is reached, where line/"ray" (at least theoretically) hits either floor or ceiling.
+                    
+                    switch(cellType)
                     {
-                        enum CellType const cellType = (enum CellType)inObj->map->cells[cellY*inObj->map->width+cellX];
-                        
-                        fillPixel(inObj, cellType, x, y, colPix);
-                        
-                        switch(cellType)
+                        case CellType_block_default: // Line/"ray" hits block's surface.
                         {
-                            case CellType_block_default:
+                            double const diffY = kLastY-kPosY,
+                                diffX = lastX-inObj->posX,
+                                diffXY = sqrt(diffY*diffY+diffX*diffX);
+                            
+                            noHit = false;
+                            countLen = diffXY*inObj->e[pos]/inObj->d[pos];
+                            fillPixel(inObj, CellType_block_default, x, y, colPix);
+                            break;
+                        }
+
+                        case CellType_floor_default: // (falls through).
+                        case CellType_floor_exit:
+                            if(!noHit) // Line/"ray" hits floor or ceiling.
                             {
-                                double const diffY = kLastY-kPosY,
-                                    diffX = lastX-inObj->posX,
-                                    diffXY = sqrt(diffY*diffY+diffX*diffX);
-                                
-                                countLen = diffXY*inObj->e[pos]/inObj->d[pos];
-                                break;
-                            }
-                            case CellType_floor_default: // (falls through)
-                            case CellType_floor_exit:
                                 countLen = inObj->e[pos];
-                                break;
-
-                            default:
-                                assert(false);
-                                break;
-                        }
-                        done = true;
-                    }
-                    else
-                    {
-                        assert(cellX>=0 && cellX<inObj->map->width);
-                        assert(cellY>=0 && cellY<inObj->map->height);
-
-                        switch((enum CellType)inObj->map->cells[cellY*inObj->map->width+cellX])
-                        {
-                            case CellType_block_default:
-                            {
-                                fillPixel(inObj, CellType_block_default, x, y, colPix); // Overdone
-                                
-                                double const diffY = kLastY-kPosY,
-                                    diffX = lastX-inObj->posX,
-                                    diffXY = sqrt(diffY*diffY+diffX*diffX);
-                                
-                                countLen = diffXY*inObj->e[pos]/inObj->d[pos];
-                                done = true;
-                                break;
+                                fillPixel(inObj, cellType, x, y, colPix);
                             }
-                                
-                            case CellType_floor_default: // (falls through)
-                            case CellType_floor_exit:
-                                break;
+                            //
+                            // Otherwise: Line/"ray" passes through current cell to the next.
+                            
+                            break;
 
-                            default:
-                                assert(false);
-                                break;
-                        }
+                        default:
+                            assert(false);
+                            break;
                     }
-                }while(!done);
+                }while(noHit);
             }
 
             // Set brightness based on map constants and line length from player:
