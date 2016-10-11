@@ -5,6 +5,7 @@
 #define MT_CALC
 
 #include <math.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,6 +41,14 @@ int Calc_getZeroSector(double const inAngle);
  * - Assumes: 0 rad <= inAngle < 2*PI rad.
  */
 void Calc_fillDeltas(double const inAngle, double const inHypotenuse, double * const inOutDeltaX, double * const inOutDeltaY);
+
+/** Create and return Sine lookup-table for first quadrant of Cartesian coordinate system (from 0 to 90 degree).
+ * 
+ * - Given length corresponds to angle 90.0 degree.
+ * - Values stored in LUT are from 0 to 65535 (where 65535+1 = 65536 corresponds to 1.0).
+ * - Caller takes ownership.
+ */
+uint16_t* Calc_createFirstQuadrantSinLut(size_t const inLen);
 
 /** Return the length of triangle's side a for given parameters.
  * 

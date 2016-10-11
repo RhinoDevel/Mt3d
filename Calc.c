@@ -1,8 +1,7 @@
 
 // MT, 2016sep11
 
-#include <stdbool.h>
-#include <stddef.h>
+#include <stdlib.h>
 #include <assert.h>
 
 #include "Calc.h"
@@ -16,6 +15,7 @@ int Calc_getZeroSector(double const inAngle)
 
 void Calc_fillDeltas(double const inAngle, double const inHypotenuse, double * const inOutDeltaX, double * const inOutDeltaY)
 {
+    assert(inAngle>=0.0 && inAngle<Calc_PiMul2);
     assert(inOutDeltaX!=NULL && inOutDeltaY!=NULL);
     
     static double const xFactor[] = { 1.0, -1.0, -1.0, 1.0 }, // One entry for each sector as index to get correct sign.
@@ -29,6 +29,34 @@ void Calc_fillDeltas(double const inAngle, double const inHypotenuse, double * c
     
     *inOutDeltaX = xFactor[zeroSector]*(zeroTwo*adjacent+oneThree*opposite);
     *inOutDeltaY = yFactor[zeroSector]*(zeroTwo*opposite+oneThree*adjacent);
+}
+
+uint16_t* Calc_createFirstQuadrantSinLut(size_t const inLen)
+{
+    static uint16_t const maxScaledSine = UINT16_MAX;
+    /*static*/ double const sineScaling = (double)(maxScaledSine+1); // Corresponds to 1.0.
+               
+    uint16_t * const retVal = malloc(inLen*sizeof *retVal);
+    double const angleScaling = M_PI_2/inLen; // inLen corresponds to 90 degree.
+    
+    assert(retVal!=NULL);
+    
+    for(int i = 0;i<inLen;++i)
+    {
+        double const angle = angleScaling*(double)i,
+            sine = sin(angle),
+            scaledSine = sineScaling*sine;
+        
+        assert(angle>=0.0 && angle<M_PI_2);
+        assert(sine>=0.0 && sine<1.0);
+        assert(scaledSine>=0.0/*&& scaledSine<=(double)maxScaledSine*/);
+        
+        retVal[i] = (uint16_t)scaledSine; // Truncates
+        
+        assert(retVal[i]<=maxScaledSine);
+    }
+    
+    return retVal;
 }
 
 double Calc_getTriangleSideA(double const inGammaRad, double const inCleftOfAltitudeC, double const inCrightOfAltitudeC)
