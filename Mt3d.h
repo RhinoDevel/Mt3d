@@ -23,8 +23,8 @@ struct Mt3d
     int const width;
     int const height;
     
-    double /*const*/ alpha; // Horizontal range of view (radian).
-    double /*const*/ beta; // Vertical range of view (radian).
+    double /*const*/ alpha; // Horizontal range of view (radian). Better be below 180 degree.
+    double /*const*/ beta; // Vertical range of view (radian). Better be below 180 degree.
     
     double /*const*/ h; // Height of players eye as fraction of ceiling height (ceiling height is measured in cell lengths).
     

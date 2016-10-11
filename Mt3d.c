@@ -30,7 +30,8 @@ static int getFloorYandFill(
         x = 0,
         y = 0;
     
-    assert(inBeta>0.0);
+    assert(inAlpha>0.0 && inAlpha<M_PI);
+    assert(inBeta>0.0 && inBeta<M_PI);
     assert(inHeight%2==0);
     assert(inWidth%2==0);
     
@@ -53,9 +54,9 @@ static int getFloorYandFill(
     {
         double const diff = xMiddle-(double)x,
             sX = sqrt(diff*diff+sXmiddleSqr);
-        
+
         betaTopX[x] = asin(yMiddle/sX);
-        assert(betaTopX[x]>0.0);
+        assert(betaTopX[x]>0.0 && betaTopX[x]<M_PI_2);
         aX[x] = yMiddle/tan(betaTopX[x]);
     }
     
@@ -77,8 +78,11 @@ static int getFloorYandFill(
                 delta = betaTopX[x]-atan((yMiddle-dY)/aX[x]);
                 assert(delta<betaTopX[x]);
                 
-                inOutE[pos] = ceilingToEye/sin(betaTopX[x]-delta); 
-                inOutD[pos] = inOutE[pos]*cos(betaTopX[x]-delta);
+                double const angle = betaTopX[x]-delta;
+                assert(angle<M_PI_2);
+                
+                inOutE[pos] = ceilingToEye/sin(angle); 
+                inOutD[pos] = inOutE[pos]*cos(angle);
             }
             else
             {
@@ -86,8 +90,11 @@ static int getFloorYandFill(
                 delta = betaTopX[x]+atan((dY-yMiddle)/aX[x]);
                 assert(delta>betaTopX[x]);
                 
-                inOutE[pos] = floorToEye/sin(delta-betaTopX[x]);
-                inOutD[pos] = inOutE[pos]*cos(delta-betaTopX[x]);
+                double const angle = delta-betaTopX[x];
+                assert(angle<M_PI_2);
+                
+                inOutE[pos] = floorToEye/sin(angle);
+                inOutD[pos] = inOutE[pos]*cos(angle);
 
                 if(retVal==-1)
                 {
@@ -351,6 +358,54 @@ void Mt3d_draw(struct Mt3d * const inObj)
                             noHit = false;
                             countLen = diffXY*inObj->e[pos]/inObj->d[pos];
                             fillPixel(inObj, CellType_block_default, y, colPix);
+                            
+//                            {
+//                                double const opposite = sqrt(countLen*countLen-diffXY*diffXY);
+//                                double imgX = nextX?(double)(inObj->map->height-1)-kLastY:lastX, // (Cartesian Y to cell Y coordinate conversion, if necessary)
+//                                    imgY = opposite;
+//
+//                                imgX -= (double)((int)imgX); // Removes integer part.
+//                                if(nextX)
+//                                {
+//                                    if(addX<0.0)
+//                                    {
+//                                        imgX = 1.0-imgX;
+//                                    }
+//                                }
+//                                else
+//                                {
+//                                    if(addY<0.0)
+//                                    {
+//                                        imgX = 1.0-imgX;
+//                                    }
+//                                }
+//                                assert(imgX>=0.0 && imgX<1.0);
+//
+//                                if(y<inObj->floorY)
+//                                {
+//                                    imgY += CEILING_HEIGHT*inObj->h;
+//                                }
+//                                else
+//                                {
+//                                    imgY = CEILING_HEIGHT*inObj->h-imgY;
+//                                }
+//                                imgY = CEILING_HEIGHT-imgY;
+//                                assert(imgY>=0.0 && imgY<1.0);
+//
+//                                if(imgY>0.25&&imgY<0.35)
+//                                {
+//                                    colPix[2] = 0;
+//                                    colPix[1] = 0;
+//                                    colPix[0] = 0;
+//                                }
+//                                if(imgX>0.25&&imgX<0.35)
+//                                {
+//                                    colPix[2] = 0xFF;
+//                                    colPix[1] = 0xFF;
+//                                    colPix[0] = 0xFF;
+//                                }
+//                            }
+
                             break;
                         }
 
