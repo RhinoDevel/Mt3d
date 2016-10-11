@@ -16,7 +16,7 @@ static const double CEILING_HEIGHT = 1.0; // 1.0 = Height equals length of one f
 static const double PLAYER_STEP_LEN = 0.2; // Cell lengths.
 static double const PLAYER_ANG_STEP = CALC_TO_RAD(5.0);
 
-static void fill(
+static int getFloorYandFill(
     int const inWidth,
     int const inHeight,
     double const inAlpha,
@@ -24,10 +24,10 @@ static void fill(
     double const inH,
     double * const inOutD,
     double * const inOutE,
-    int * const inOutFloorY,
     double * const inOutEta)
 {
-    int x = 0,
+    int retVal = -1,
+        x = 0,
         y = 0;
     
     assert(inBeta>0.0);
@@ -57,8 +57,6 @@ static void fill(
         betaTopX[x] = asin(yMiddle/sX);
         assert(betaTopX[x]>0.0);
         aX[x] = yMiddle/tan(betaTopX[x]);
-        
-        inOutFloorY[x] = -1;
     }
     
     for(y = 0;y<inHeight;++y)
@@ -91,9 +89,9 @@ static void fill(
                 inOutE[pos] = floorToEye/sin(delta-betaTopX[x]);
                 inOutD[pos] = inOutE[pos]*cos(delta-betaTopX[x]);
 
-                if(inOutFloorY[x]==-1)
+                if(retVal==-1)
                 {
-                    inOutFloorY[x] = y;
+                    retVal = y;
                 }
             }
             
@@ -115,28 +113,10 @@ static void fill(
             //Deb_line("y = %d, x = %d: betaTopX = %f degree, delta = %f degree, e = %f cell length, d = %f cell length, epsilon = %f degree, eta = %f degree.", y, x, CALC_TO_DEG(betaTopX[x]), CALC_TO_DEG(delta), inOutE[pos], inOutD[pos], CALC_TO_DEG(epsilon), CALC_TO_DEG(inOutEta[x]))
         }
     }
-    
-#ifndef NDEBUG
-    {
-        int firstY = -1;
-        
-        for(x = 0;x<inWidth;++x)
-        {
-            if(firstY==-1)
-            {
-                assert(inOutFloorY[x]>0);
-                firstY = inOutFloorY[x];
-            }
-            else
-            {
-                assert(firstY==inOutFloorY[x]);
-            }
-        }
-    }
-#endif //NDEBUG
 
     free(betaTopX);
     free(aX);
+    return retVal;
 }
 
 static bool posStep(struct Mt3d * const inOutObj, double const inIota) // Iota: Complete angle in wanted direction (0 rad <= a < 2*PI rad).
@@ -185,7 +165,7 @@ bool Mt3d_pos_leftOrRight(struct Mt3d * const inOutObj, bool inLeft)
     return posStep(inOutObj, CALC_ANGLE_TO_POS(inOutObj->gamma+(inLeft?1.0:-1.0)*M_PI_2));
 }
 
-static void fillPixel(struct Mt3d const * const inObj, enum CellType const inCellType, int const inX, int const inY, uint8_t * const inOutPix)
+static void fillPixel(struct Mt3d const * const inObj, enum CellType const inCellType, int const inY, uint8_t * const inOutPix)
 {
     switch(inCellType)
     {
@@ -195,7 +175,7 @@ static void fillPixel(struct Mt3d const * const inObj, enum CellType const inCel
             inOutPix[0] = 0;
             break;
         case CellType_floor_default:
-            if(inY<inObj->floorY[inX])
+            if(inY<inObj->floorY)
             {
                 inOutPix[2] = 0;
                 inOutPix[1] = 0;
@@ -209,7 +189,7 @@ static void fillPixel(struct Mt3d const * const inObj, enum CellType const inCel
             }
             break;
         case CellType_floor_exit:
-            if(inY<inObj->floorY[inX])
+            if(inY<inObj->floorY)
             {
                 inOutPix[2] = 0xFF;
                 inOutPix[1] = 0xFF;
@@ -282,7 +262,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
             if((cellX==dCellX)&&(cellY==dCellY)) // Line/"ray" hits floor or ceiling in current/player's cell.
             {            
                 countLen = inObj->e[pos];
-                fillPixel(inObj, (enum CellType)inObj->map->cells[cellY*inObj->map->width+cellX], x, y, colPix);
+                fillPixel(inObj, (enum CellType)inObj->map->cells[cellY*inObj->map->width+cellX], y, colPix);
             }
             else
             {
@@ -311,21 +291,23 @@ void Mt3d_draw(struct Mt3d * const inObj)
                     bool nextY = false,
                         nextX = false;
                     
+                    static double const helper = 0.0001; // MT_TODO: TEST: This is no good, we should replace almost all of the floating-point stuff with integer calculations!
+
                     if(addX==1)
                     {
-                        nextY = ((hitX>((double)(xForHit-1)-0.0001))&&(hitX<((double)(xForHit)+0.0001)));
+                        nextY = ((hitX>((double)(xForHit-1)-helper))&&(hitX<((double)(xForHit)+helper)));
                     }
                     else
                     {
-                        nextY = ((hitX<((double)(xForHit+1)+0.0001))&&(hitX>((double)(xForHit)-0.0001)));
+                        nextY = ((hitX<((double)(xForHit+1)+helper))&&(hitX>((double)(xForHit)-helper)));
                     }
                     if(addY==1)
                     {
-                        nextX = ((hitY>((double)(yForHit-1)-0.0001))&&(hitY<((double)(yForHit)+0.0001)));
+                        nextX = ((hitY>((double)(yForHit-1)-helper))&&(hitY<((double)(yForHit)+helper)));
                     }
                     else
                     {
-                        nextX = ((hitY<((double)(yForHit+1)+0.0001))&&(hitY>((double)(yForHit)-0.0001)));
+                        nextX = ((hitY<((double)(yForHit+1)+helper))&&(hitY>((double)(yForHit)-helper)));
                     }
 
                     assert(nextY||nextX);
@@ -368,7 +350,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
                             
                             noHit = false;
                             countLen = diffXY*inObj->e[pos]/inObj->d[pos];
-                            fillPixel(inObj, CellType_block_default, x, y, colPix);
+                            fillPixel(inObj, CellType_block_default, y, colPix);
                             break;
                         }
 
@@ -377,7 +359,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
                             if(!noHit) // Line/"ray" hits floor or ceiling.
                             {
                                 countLen = inObj->e[pos];
-                                fillPixel(inObj, cellType, x, y, colPix);
+                                fillPixel(inObj, cellType, y, colPix);
                             }
                             //
                             // Otherwise: Line/"ray" passes through current cell to the next.
@@ -423,9 +405,6 @@ void Mt3d_delete(struct Mt3d * const inObj)
     assert(inObj->e!=NULL);
     free((double*)inObj->e);
     
-    assert(inObj->floorY!=NULL);
-    free((int*)inObj->floorY);
-    
     assert(inObj->eta!=NULL);
     free((double*)inObj->eta);
     
@@ -434,8 +413,7 @@ void Mt3d_delete(struct Mt3d * const inObj)
 
 void Mt3d_update(double const inAlpha, double const inBeta, double const inH, struct Mt3d * const inOutObj)
 {
-    fill(inOutObj->width, inOutObj->height, inAlpha, inBeta, inH, inOutObj->d, inOutObj->e, inOutObj->floorY, inOutObj->eta);
-    
+    inOutObj->floorY = getFloorYandFill(inOutObj->width, inOutObj->height, inAlpha, inBeta, inH, inOutObj->d, inOutObj->e, inOutObj->eta);
     inOutObj->alpha = inAlpha;
     inOutObj->beta = inBeta;
     inOutObj->h = inH;
@@ -455,9 +433,6 @@ struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, double const in
     double * const e = malloc(pixelCount*sizeof *e);
     assert(e!=NULL);
     
-    int * const floorY = malloc(inWidth*sizeof *floorY);
-    assert(floorY!=NULL);
-    
     double * const eta = malloc(pixelCount*sizeof *eta);
     assert(eta!=NULL);
     
@@ -471,7 +446,7 @@ struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, double const in
             
         .d = d,
         .e = e,
-        .floorY = floorY,
+        .floorY = -1, // Invalidates
             
         .eta = eta,
             
