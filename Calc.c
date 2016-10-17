@@ -6,6 +6,9 @@
 
 #include "Calc.h"
 
+static uint16_t const maxScaledSine = UINT16_MAX;
+static double const maxScaledSineD = (double)UINT16_MAX;
+
 int Calc_getZeroSector(double const inAngle)
 {
     assert(inAngle>=0.0&&inAngle<Calc_PiMul2);
@@ -33,7 +36,6 @@ void Calc_fillDeltas(double const inAngle, double const inHypotenuse, double * c
 
 uint16_t* Calc_createFirstQuadrantSinLut(size_t const inLen)
 {
-    static uint16_t const maxScaledSine = UINT16_MAX;
     /*static*/ double const sineScaling = (double)(maxScaledSine+1); // Corresponds to 1.0.
                
     uint16_t * const retVal = malloc(inLen*sizeof *retVal);
@@ -57,6 +59,16 @@ uint16_t* Calc_createFirstQuadrantSinLut(size_t const inLen)
     }
     
     return retVal;
+}
+
+double Calc_sin(uint16_t const * const inLut, size_t const inLen, double const inRad)
+{
+    assert(inLut!=NULL);
+    assert(inLen>0);
+    
+    assert(inRad>=0.0 && inRad<M_PI_2); // MT_TODO: TEST: Currently not implemented!
+    
+    return ((double)(inLut[(int)((inLen*inRad)/M_PI_2)]))/maxScaledSineD;
 }
 
 double Calc_getTriangleSideA(double const inGammaRad, double const inCleftOfAltitudeC, double const inCrightOfAltitudeC)
