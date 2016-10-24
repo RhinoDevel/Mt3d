@@ -70,6 +70,18 @@ double Calc_sin(uint16_t const * const inLut, size_t const inLen, double const i
     
     return ((double)(inLut[(int)((inLen*inRad)/M_PI_2)]))/maxScaledSineD;
 }
+double Calc_cos(uint16_t const * const inSinLut, size_t const inLen, double const inRad)
+{
+    assert(inSinLut!=NULL);
+    assert(inLen>0);
+    
+    assert(inRad>=0.0 && inRad<M_PI_2); // MT_TODO: TEST: Currently not implemented and next next line depends on it!
+    return Calc_sin(inSinLut, inLen, M_PI_2-inRad);
+}
+double Calc_tan(uint16_t const * const inSinLut, size_t const inLen, double const inRad)
+{
+    return Calc_sin(inSinLut, inLen, inRad)/Calc_cos(inSinLut, inLen, inRad);
+}
 
 double Calc_getTriangleSideA(double const inGammaRad, double const inCleftOfAltitudeC, double const inCrightOfAltitudeC)
 {

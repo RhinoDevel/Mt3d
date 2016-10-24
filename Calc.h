@@ -51,6 +51,8 @@ void Calc_fillDeltas(double const inAngle, double const inHypotenuse, double * c
 uint16_t* Calc_createFirstQuadrantSinLut(size_t const inLen);
 
 double Calc_sin(uint16_t const * const inLut, size_t const inLen, double const inRad);
+double Calc_cos(uint16_t const * const inSinLut, size_t const inLen, double const inRad);
+double Calc_tan(uint16_t const * const inSinLut, size_t const inLen, double const inRad);
 
 /** Return the length of triangle's side a for given parameters.
  * 
