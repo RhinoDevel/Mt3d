@@ -81,7 +81,7 @@ static int getFloorYandFill(
                 double const angle = betaTopX[x]-delta;
                 assert(angle<M_PI_2);
                 
-                inOutE[pos] = ceilingToEye/sin(angle); 
+                inOutE[pos] = ceilingToEye/sin(angle);
                 inOutD[pos] = inOutE[pos]*cos(angle);
             }
             else
@@ -297,24 +297,22 @@ void Mt3d_draw(struct Mt3d * const inObj)
 
                     bool nextY = false,
                         nextX = false;
-                    
-                    static double const helper = 0.0001; // MT_TODO: TEST: This is no good, we should replace almost all of the floating-point stuff with integer calculations!
 
                     if(addX==1)
                     {
-                        nextY = ((hitX>((double)(xForHit-1)-helper))&&(hitX<((double)(xForHit)+helper)));
+                        nextY = (int)hitX<xForHit;
                     }
                     else
                     {
-                        nextY = ((hitX<((double)(xForHit+1)+helper))&&(hitX>((double)(xForHit)-helper)));
+                        nextY = hitX>=(double)xForHit;
                     }
                     if(addY==1)
                     {
-                        nextX = ((hitY>((double)(yForHit-1)-helper))&&(hitY<((double)(yForHit)+helper)));
+                        nextX = (int)hitY<yForHit;
                     }
                     else
                     {
-                        nextX = ((hitY<((double)(yForHit+1)+helper))&&(hitY>((double)(yForHit)-helper)));
+                        nextX = hitY>=(double)yForHit;
                     }
 
                     assert(nextY||nextX);
@@ -324,7 +322,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
                         // Update last reached coordinates:
                         //
                         lastX = hitX;
-                        kLastY = yForHit;
+                        kLastY = (double)yForHit;
                         
                         cellY -= addY;
                         yForHit += addY;
@@ -333,7 +331,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
                     {
                         // Update last reached coordinates:
                         //
-                        lastX = xForHit;
+                        lastX = (double)xForHit;
                         kLastY = hitY;
                         
                         cellX += addX;
