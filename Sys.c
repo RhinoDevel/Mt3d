@@ -71,9 +71,9 @@ char* Sys_create_time_str(bool const inDate, bool const inSeconds)
 char* Sys_get_stdin()
 {
     size_t const granularity = 20;
-    size_t len = granularity;
+    size_t len = granularity,
+        i = 0;
     char* retVal = malloc(len*(sizeof *retVal));
-    int i = 0;
     assert(retVal!=NULL);
 
     while(true)
