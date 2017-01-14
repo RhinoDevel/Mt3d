@@ -24,6 +24,25 @@ bool Sys_is_big_endian()
     return u.uC[0]==1;
 }
 
+/** Return monotonic clock time in milliseconds.
+ * 
+ * - See: http://stackoverflow.com/questions/361363/how-to-measure-time-in-milliseconds-using-ansi-c 
+ */
+uint64_t Sys_get_posix_clock_time_ms()
+{
+    struct timespec ts;
+
+    if(clock_gettime(CLOCK_MONOTONIC, &ts)==0)
+    {
+        return (uint64_t)(ts.tv_sec*1000+ts.tv_nsec/1000000);
+    }
+    else
+    {
+        assert(false);
+        return 0;
+    }
+}
+
 char* Sys_create_time_str(bool const inDate, bool const inSeconds)
 {
     char* retVal = NULL;

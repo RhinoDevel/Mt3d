@@ -5,12 +5,15 @@
 #define MT_SYS
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifdef	__cplusplus
 extern "C" {
 #endif //__cplusplus
 
 bool Sys_is_big_endian();
+
+uint64_t Sys_get_posix_clock_time_ms();
 
 /** Return "time" string.
  *
