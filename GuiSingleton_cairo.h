@@ -10,14 +10,18 @@
 extern "C" {
 #endif
 
+void GuiSingleton_cairo_draw();
+    
 void GuiSingleton_cairo_init(
     int const inWidth, 
     int const inHeight,
     double const inScaleFactor,
     char const * const inWinTitle,
     unsigned char * const inPixels,
-    bool (*inKeyHandler)(char const),
-    void (*inGameLoop)(void));
+    void (*inKeyPressHandler)(char const),
+    void (*inKeyReleaseHandler)(char const),
+    void (*inTimerHandler)(void),
+    int const inTimerInterval);
 void GuiSingleton_cairo_deinit();
 
 #ifdef __cplusplus
