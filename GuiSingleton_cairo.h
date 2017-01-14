@@ -16,7 +16,8 @@ void GuiSingleton_cairo_init(
     double const inScaleFactor,
     char const * const inWinTitle,
     unsigned char * const inPixels,
-    bool (*inKeyHandler)(char const));
+    bool (*inKeyHandler)(char const),
+    void (*inGameLoop)(void));
 void GuiSingleton_cairo_deinit();
 
 #ifdef __cplusplus

@@ -8,12 +8,20 @@
 #include <math.h>
 #include <assert.h>
 
+#include "Deb.h"
 #include "Mt3dSingleton.h"
 #include "GuiSingleton_cairo.h"
 
 static int const WIDTH = 320;
 static int const HEIGHT = 200;
 static double const SCALE_FACTOR = 4.0;
+
+static void onGameLoop()
+{
+    static int c = 0;
+    
+    Deb_line("TIMER EVENT NR. %d.", ++c);
+}
 
 /** GUI singleton will call this function as callback,
  *  if a key got pressed. The key will be represented by given character.
@@ -75,7 +83,7 @@ int main(int argc, char *argv[])
     
     // Initialize and give control to GUI singleton (easily replaceable by some other GUI singleton):
     //
-    GuiSingleton_cairo_init(WIDTH, HEIGHT, SCALE_FACTOR, "MT 3D", Mt3dSingleton_getPixels(), onCharPress);
+    GuiSingleton_cairo_init(WIDTH, HEIGHT, SCALE_FACTOR, "MT 3D", Mt3dSingleton_getPixels(), onCharPress, onGameLoop);
     
     // -> GUI has control, here (GUI main loop is running). <-
     

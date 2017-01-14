@@ -2,6 +2,7 @@
 // MT, 2017jan14
 
 #include "GuiSingleton_cairo.h"
+#include "Deb.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -11,9 +12,11 @@
 #include <gdk/gdkkeysyms.h>
 
 static GtkWidget * darea = NULL;
-static cairo_surface_t * image = NULL;  
+static cairo_surface_t * image = NULL;
+static guint timer_id = 0;
 static double scaleFactor = -1.0;
 static bool (*keyHandler)(char const) = NULL;
+static void (*gameLoop)(void) = NULL;
 
 static gboolean on_draw_event(GtkWidget* widget, cairo_t* cr, gpointer user_data)
 {      
@@ -45,23 +48,36 @@ static gboolean on_key_press(GtkWidget* widget, GdkEventKey* event, gpointer use
     return FALSE;
 }
 
+/**
+ * - See: https://developer.gnome.org/glib/unstable/glib-The-Main-Event-Loop.html#GSourceFunc 
+ */
+static gboolean on_timer_event(gpointer user_data)
+{
+    gameLoop();
+    return G_SOURCE_CONTINUE;//G_SOURCE_REMOVE
+}
+
 void GuiSingleton_cairo_init(
     int const inWidth,
     int const inHeight,
     double const inScaleFactor,
     char const * const inWinTitle,
     unsigned char * const inPixels,
-    bool (*inKeyHandler)(char const))
+    bool (*inKeyHandler)(char const),
+    void (*inGameLoop)(void))
 {
     assert(darea==NULL);
     assert(image==NULL);
+    assert(timer_id==0);
     assert(scaleFactor==-1.0);
     assert(keyHandler==NULL);
+    assert(gameLoop==NULL);
     
     GtkWidget * window = NULL;
     
     scaleFactor = inScaleFactor;
     keyHandler = inKeyHandler;
+    gameLoop = inGameLoop;
     
     int const stride = cairo_format_stride_for_width(CAIRO_FORMAT_RGB24, inWidth),
         scaledWidth = (int)(scaleFactor*inWidth), // Truncates
@@ -87,14 +103,20 @@ void GuiSingleton_cairo_init(
     
     gtk_widget_show_all(window);
     drawFrame();
+    
+    timer_id = g_timeout_add(1000, &on_timer_event, NULL); // See: https://developer.gnome.org/glib/unstable/glib-The-Main-Event-Loop.html#g-timeout-add
+    
     gtk_main();
 }
 
 void GuiSingleton_cairo_deinit()
 {
+    g_source_remove(timer_id); // See: https://developer.gnome.org/glib/unstable/glib-The-Main-Event-Loop.html#g-source-remove
     cairo_surface_destroy(image);
     image = NULL;
     darea = NULL; // MT_TODO: TEST: Enough?
+    timer_id = 0;
     scaleFactor = -1.0;
     keyHandler = NULL;
+    gameLoop = NULL;
 }
