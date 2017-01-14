@@ -471,7 +471,7 @@ void Mt3d_update(double const inAlpha, double const inBeta, double const inH, st
     inOutObj->beta = inBeta;
     inOutObj->h = inH;
     
-    Deb_line("Alpha = %f degree, beta = %f degree, h(-eight) = %f cell length.", CALC_TO_DEG(inAlpha), CALC_TO_DEG(inBeta), inH)
+    //Deb_line("Alpha = %f degree, beta = %f degree, h(-eight) = %f cell length.", CALC_TO_DEG(inAlpha), CALC_TO_DEG(inBeta), inH)
 }
 
 struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, double const inAlpha, double const inBeta, double const inH)
