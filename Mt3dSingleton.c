@@ -171,20 +171,22 @@ void Mt3dSingleton_init()
     o->posY = o->map->posY;
     o->gamma = o->map->gamma;
 
-    for(int row = 0, col = 0;row<HEIGHT;++row)
-    {
-        uint32_t * const rowPix = ((uint32_t*)o->pixels)+row*WIDTH;
-
-        for(col = 0;col<WIDTH;++col)
-        {
-            uint8_t * const colPix = (uint8_t*)(rowPix+col);
-
-            colPix[0] = 0xFF; // Blue
-            colPix[1] = 0x0; // Green
-            colPix[2] = 0xFF; // Red
-            //colPix[3] = 0xFF; // (unused)
-        }
-    }
+//    for(int row = 0, col = 0;row<HEIGHT;++row)
+//    {
+//        uint32_t * const rowPix = ((uint32_t*)o->pixels)+row*WIDTH;
+//
+//        for(col = 0;col<WIDTH;++col)
+//        {
+//            uint8_t * const colPix = (uint8_t*)(rowPix+col);
+//
+//            colPix[0] = 0xFF; // Blue
+//            colPix[1] = 0x0; // Green
+//            colPix[2] = 0xFF; // Red
+//            //colPix[3] = 0xFF; // (unused)
+//        }
+//    }
+    
+    Mt3dSingleton_draw();
 }
 void Mt3dSingleton_deinit()
 {
