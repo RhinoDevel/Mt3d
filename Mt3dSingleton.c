@@ -9,8 +9,6 @@
 #include "MapSample.h"
 #include "Mt3dSingleton.h"
 
-static int const WIDTH = 320;
-static int const HEIGHT = 200;
 static double const ALPHA = CALC_TO_RAD(45.0);
 static double const ALPHA_MIN = CALC_TO_RAD(20.0);
 static double const ALPHA_MAX = CALC_TO_RAD(160.0);
@@ -21,10 +19,15 @@ static double const H_MAX = 0.9;
 static double const H_STEP = 0.1;
 
 static struct Mt3d * o = NULL;
+static int width = 0;
+static int height = 0;
 
 static double getBeta(double const inAlpha)
 {
-    return 2.0*atan((double)HEIGHT*tan(inAlpha/2.0)/(double)WIDTH);
+    assert(width>0);
+    assert(height>0);
+    
+    return 2.0*atan((double)height*tan(inAlpha/2.0)/(double)width);
 }
 
 bool Mt3dSingleton_ang_left()
@@ -157,25 +160,32 @@ void Mt3dSingleton_draw()
     Mt3d_draw(o);
 }
 
-void Mt3dSingleton_init()
+void Mt3dSingleton_init(int const inWidth, int const inHeight)
 {
+    assert(width==0);
+    assert(height==0);
     assert(o==NULL);
     
-    o = Mt3d_create(WIDTH, HEIGHT, ALPHA, getBeta(ALPHA), H);
+    assert(inWidth>0);
+    assert(inHeight>0);
+    
+    width = inWidth;
+    height = inHeight;
+    o = Mt3d_create(inWidth, height, ALPHA, getBeta(ALPHA), H);
     
     o->map = MapSample_create();
     assert(sizeof *o->pixels==1);
-    o->pixels = malloc(WIDTH*HEIGHT*4*sizeof *o->pixels);
+    o->pixels = malloc(width*height*4*sizeof *o->pixels);
     assert(o->pixels!=NULL);
     o->posX = o->map->posX;
     o->posY = o->map->posY;
     o->gamma = o->map->gamma;
 
-//    for(int row = 0, col = 0;row<HEIGHT;++row)
+//    for(int row = 0, col = 0;row<height;++row)
 //    {
-//        uint32_t * const rowPix = ((uint32_t*)o->pixels)+row*WIDTH;
+//        uint32_t * const rowPix = ((uint32_t*)o->pixels)+row*width;
 //
-//        for(col = 0;col<WIDTH;++col)
+//        for(col = 0;col<width;++col)
 //        {
 //            uint8_t * const colPix = (uint8_t*)(rowPix+col);
 //
@@ -190,6 +200,8 @@ void Mt3dSingleton_init()
 }
 void Mt3dSingleton_deinit()
 {
+    assert(width>0);
+    assert(height>0);
     assert(o!=NULL);
     assert(o->map!=NULL);
     assert(o->pixels!=NULL);

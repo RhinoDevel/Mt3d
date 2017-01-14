@@ -11,6 +11,8 @@
 #include "Mt3dSingleton.h"
 #include "GuiSingleton_cairo.h"
 
+static int const WIDTH = 320;
+static int const HEIGHT = 200;
 static double const SCALE_FACTOR = 4.0;
 
 static bool onCharPress(char const inChar)
@@ -63,8 +65,8 @@ static bool onCharPress(char const inChar)
 
 int main(int argc, char *argv[])
 {
-    Mt3dSingleton_init();
-    GuiSingleton_cairo_init(Mt3dSingleton_getWidth(), Mt3dSingleton_getHeight(), SCALE_FACTOR, "MT 3D", Mt3dSingleton_getPixels(), onCharPress);
+    Mt3dSingleton_init(WIDTH, HEIGHT);
+    GuiSingleton_cairo_init(WIDTH, HEIGHT, SCALE_FACTOR, "MT 3D", Mt3dSingleton_getPixels(), onCharPress);
     GuiSingleton_cairo_deinit();
     Mt3dSingleton_deinit();
     return EXIT_SUCCESS;

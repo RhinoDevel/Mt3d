@@ -21,13 +21,10 @@ bool Mt3dSingleton_pos_down();
 bool Mt3dSingleton_fov_wider();
 bool Mt3dSingleton_fov_narrower();
 
-int Mt3dSingleton_getWidth();
-int Mt3dSingleton_getHeight();
-
 unsigned char * Mt3dSingleton_getPixels();
 
 void Mt3dSingleton_draw();
-void Mt3dSingleton_init();
+void Mt3dSingleton_init(int const inWidth, int const inHeight);
 void Mt3dSingleton_deinit();
 
 #ifdef __cplusplus
