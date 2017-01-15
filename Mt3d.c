@@ -235,7 +235,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
     // => yCartesian = heightCell-1-yCell
     // => yCell      = heightCell-1-yCartesian
     
-    double const kPosY = ((double)(inObj->map->height-1))-inObj->posY;
+    double const kPosY = (double)(inObj->map->height-1)-inObj->posY;
     
     for(int y = 0;y<inObj->height;++y)
     {
