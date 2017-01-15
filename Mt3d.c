@@ -239,17 +239,20 @@ void Mt3d_draw(struct Mt3d * const inObj)
     
     for(int y = 0;y<inObj->height;++y)
     {
-        uint32_t * const rowPix = (uint32_t*)inObj->pixels+y*inObj->width;
+        int const truncPosX = (int)inObj->posX,
+            truncPosY = (int)inObj->posY,
+            rowByWidth = y*inObj->width;
+        uint32_t * const rowPix = (uint32_t*)inObj->pixels+rowByWidth;
         
         for(int x = 0;x<inObj->width;++x)
         {   
             double deltaX = 0.0,
                 deltaY = 0.0,
                 countLen = -1.0; // Means unset.
-            int cellX = (int)inObj->posX,
-                cellY = (int)inObj->posY;
+            int cellX = truncPosX,
+                cellY = truncPosY;
             
-            int const pos = y*inObj->width+x;
+            int const pos = rowByWidth+x;
             
             {
                 double const zetaUnchecked = inObj->eta[pos]+inObj->gamma; // (might be out of expected range, see usage below)
