@@ -49,12 +49,17 @@ static gboolean on_timer_event(gpointer user_data)
     return G_SOURCE_CONTINUE;//G_SOURCE_REMOVE
 }
 
+void GuiSingleton_cairo_prepareForDirectDraw()
+{
+    assert(image!=NULL);
+    cairo_surface_flush(image);
+}
+
 void GuiSingleton_cairo_draw()
 {
     assert(image!=NULL);
     assert(darea!=NULL);
-    
-    cairo_surface_flush(image);
+
     cairo_surface_mark_dirty(image);
     gtk_widget_queue_draw(darea);
 }

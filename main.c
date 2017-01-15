@@ -13,9 +13,9 @@
 #include "Mt3dSingleton.h"
 #include "GuiSingleton_cairo.h"
 
-static int const WIDTH = 320;
-static int const HEIGHT = 240;
-static double const SCALE_FACTOR = 4.0;
+static int const WIDTH = 640;
+static int const HEIGHT = 480;
+static double const SCALE_FACTOR = 1.0;
 
 static bool ang_left = false;
 static bool ang_right = false;
@@ -94,6 +94,7 @@ static void update()
 //
 void render(double const inLag)
 {
+    GuiSingleton_cairo_prepareForDirectDraw();
     Mt3dSingleton_draw();
     GuiSingleton_cairo_draw();
 }

@@ -10,6 +10,7 @@
 extern "C" {
 #endif
 
+void GuiSingleton_cairo_prepareForDirectDraw();
 void GuiSingleton_cairo_draw();
     
 void GuiSingleton_cairo_init(
