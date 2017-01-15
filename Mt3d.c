@@ -295,29 +295,11 @@ void Mt3d_draw(struct Mt3d * const inObj)
                 
                 do
                 {   
-                    double const hitX = (((double)yForHit)-b)/m,
-                        hitY = m*((double)xForHit)+b;
-
-                    bool nextY = false,
-                        nextX = false;
-
-                    if(addX==1)
-                    {
-                        nextY = (int)hitX<xForHit;
-                    }
-                    else
-                    {
-                        nextY = hitX>=(double)xForHit;
-                    }
-                    if(addY==1)
-                    {
-                        nextX = (int)hitY<yForHit;
-                    }
-                    else
-                    {
-                        nextX = hitY>=(double)yForHit;
-                    }
-
+                    double const hitX = ((double)yForHit-b)/m,
+                        hitY = m*(double)xForHit+b;
+                    bool const nextY = ( addX==1 && (int)hitX<xForHit ) || ( addX!=1 && hitX>=(double)xForHit ),
+                        nextX = ( addY==1 && (int)hitY<yForHit ) || ( addY!=1 && hitY>=(double)yForHit );
+                    
                     assert(nextY||nextX);
 
                     if(nextY)
