@@ -11,6 +11,7 @@
 #include "Mt3d.h"
 #include "Sys.h"
 #include "Calc.h"
+#include "Bmp.h"
 
 static const double CEILING_HEIGHT = 1.0; // 1.0 = Height equals length of one floor/ceiling cell.
 static const double PLAYER_STEP_LEN = 0.2; // Cell lengths.
@@ -257,7 +258,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
             {
                 double const zetaUnchecked = inObj->eta[pos]+inObj->gamma; // (might be out of expected range, see usage below)
 
-                Calc_fillDeltas(CALC_ANGLE_TO_POS(zetaUnchecked), inObj->d[pos], &deltaX, &deltaY);
+                Calc_fillDeltas(CALC_ANGLE_TO_POS(zetaUnchecked), inObj->d[pos], &deltaX, &deltaY); // MT_TODO: TEST: Seems to be a performance bottleneck!
             }
             
             assert(deltaX!=0.0); // MT_TODO: TEST: Implement special case! 
@@ -344,39 +345,49 @@ void Mt3d_draw(struct Mt3d * const inObj)
                             countLen = diffXY*inObj->e[pos]/inObj->d[pos];
                             fillPixel(inObj, CellType_block_default, y, colPix);
                             
-//                            {
-//                                double const opposite = sqrt(countLen*countLen-diffXY*diffXY);
-//                                double imgX = nextX?(double)(inObj->map->height-1)-kLastY:lastX, // (Cartesian Y to cell Y coordinate conversion, if necessary)
-//                                    imgY = opposite;
-//
-//                                imgX -= (double)((int)imgX); // Removes integer part.
-//                                if(nextX)
-//                                {
-//                                    if(addX<0.0)
-//                                    {
-//                                        imgX = 1.0-imgX;
-//                                    }
-//                                }
-//                                else
-//                                {
-//                                    if(addY<0.0)
-//                                    {
-//                                        imgX = 1.0-imgX;
-//                                    }
-//                                }
-//                                assert(imgX>=0.0 && imgX<1.0);
-//
-//                                if(y<inObj->floorY)
-//                                {
-//                                    imgY += CEILING_HEIGHT*inObj->h;
-//                                }
-//                                else
-//                                {
-//                                    imgY = CEILING_HEIGHT*inObj->h-imgY;
-//                                }
-//                                imgY = CEILING_HEIGHT-imgY;
-//                                assert(imgY>=0.0 && imgY<1.0);
-//
+                            {
+                                double const opposite = sqrt(countLen*countLen-diffXY*diffXY);
+                                double imgX = nextX?(double)(inObj->map->height-1)-kLastY:lastX, // (Cartesian Y to cell Y coordinate conversion, if necessary)
+                                    imgY = opposite;
+
+                                imgX -= (double)((int)imgX); // Removes integer part.
+                                if(nextX)
+                                {
+                                    if(addX<0.0)
+                                    {
+                                        imgX = 1.0-imgX;
+                                    }
+                                }
+                                else
+                                {
+                                    if(addY<0.0)
+                                    {
+                                        imgX = 1.0-imgX;
+                                    }
+                                }
+                                assert(imgX>=0.0 && imgX<1.0);
+
+                                if(y<inObj->floorY)
+                                {
+                                    imgY += CEILING_HEIGHT*inObj->h;
+                                }
+                                else
+                                {
+                                    imgY = CEILING_HEIGHT*inObj->h-imgY;
+                                }
+                                imgY = CEILING_HEIGHT-imgY;
+                                assert(imgY>=0.0 && imgY<1.0);
+
+                                {
+                                    int const row = (int)((double)inObj->sampleBmpH*imgY),
+                                        col = (int)((double)inObj->sampleBmpH*imgX);
+                                    
+                                    unsigned char const * const channelZeroPtr = inObj->sampleBmpPix+3*sizeof(char)*inObj->sampleBmpW*row+3*sizeof(char)*col;
+                                    
+                                    colPix[0] = channelZeroPtr[0];
+                                    colPix[1] = channelZeroPtr[1];
+                                    colPix[2] = channelZeroPtr[2];
+                                }
 //                                if(imgY>0.25&&imgY<0.35)
 //                                {
 //                                    colPix[2] = 0;
@@ -389,7 +400,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
 //                                    colPix[1] = 0xFF;
 //                                    colPix[0] = 0xFF;
 //                                }
-//                            }
+                            }
 
                             break;
                         }
@@ -448,6 +459,9 @@ void Mt3d_delete(struct Mt3d * const inObj)
     assert(inObj->eta!=NULL);
     free((double*)inObj->eta);
     
+    assert(inObj->sampleBmpPix!=NULL);
+    free(inObj->sampleBmpPix);
+    
     free(inObj);
 }
 
@@ -494,7 +508,11 @@ struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, double const in
         .posY = 0.0,
         .gamma = 0.0,
         .map = NULL,
-        .pixels = NULL
+        .pixels = NULL,
+            
+        .sampleBmpPix = Bmp_read("gradient-redblue-120x120.bmp"),
+        .sampleBmpW = 120,
+        .sampleBmpH = 120,
     };
 
     memcpy(retVal, &buf, sizeof *retVal);
