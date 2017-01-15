@@ -295,10 +295,12 @@ void Mt3d_draw(struct Mt3d * const inObj)
                 
                 do
                 {   
-                    double const hitX = ((double)yForHit-b)/m,
-                        hitY = m*(double)xForHit+b;
-                    bool const nextY = ( addX==1 && (int)hitX<xForHit ) || ( addX!=1 && hitX>=(double)xForHit ),
-                        nextX = ( addY==1 && (int)hitY<yForHit ) || ( addY!=1 && hitY>=(double)yForHit );
+                    double const dblYForHit = (double)yForHit,
+                        dblXForHit = (double)xForHit,
+                        hitX = (dblYForHit-b)/m,
+                        hitY = m*dblXForHit+b;
+                    bool const nextY = ( addX==1 && (int)hitX<xForHit ) || ( addX!=1 && hitX>=dblXForHit ),
+                        nextX = ( addY==1 && (int)hitY<yForHit ) || ( addY!=1 && hitY>=dblYForHit );
                     
                     assert(nextY||nextX);
 
@@ -307,7 +309,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
                         // Update last reached coordinates:
                         //
                         lastX = hitX;
-                        kLastY = (double)yForHit;
+                        kLastY = dblYForHit;
                         
                         cellY -= addY;
                         yForHit += addY;
@@ -316,7 +318,7 @@ void Mt3d_draw(struct Mt3d * const inObj)
                     {
                         // Update last reached coordinates:
                         //
-                        lastX = (double)xForHit;
+                        lastX = dblXForHit;
                         kLastY = hitY;
                         
                         cellX += addX;
