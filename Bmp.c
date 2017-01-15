@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "Sys.h"
 #include "Bmp.h"
@@ -44,6 +45,28 @@ struct Bitmap
 };
 #pragma pack(pop)
 
+static void flipVertically(unsigned char * const inOutPixels, int const inWidth, int const inHeight)
+{
+    assert(inOutPixels!=NULL);
+    assert(inWidth>0);
+    assert(inHeight>0);
+    
+    size_t const rowByteWidth = inWidth*3*sizeof(unsigned char); // MT_TODO: TEST: Hard-coded for three channels!
+    unsigned char * const rowBuf = (unsigned char *)malloc(rowByteWidth);
+    
+    for(int row = 0;row<inHeight/2;++row)
+    {
+        unsigned char * const rowPtr = inOutPixels+row*rowByteWidth,
+            * const otherRowPtr = inOutPixels+(inHeight-1-row)*rowByteWidth;
+        
+        memcpy(rowBuf, otherRowPtr, rowByteWidth);
+        memcpy(otherRowPtr, rowPtr, rowByteWidth);
+        memcpy(rowPtr, rowBuf, rowByteWidth);
+    }
+    
+    free(rowBuf);
+}
+
 void Bmp_write(int const inWidth, int const inHeight, unsigned char const * const inPixels, char const * const inFilePath)
 {
     assert(!Sys_is_big_endian());
@@ -78,4 +101,54 @@ void Bmp_write(int const inWidth, int const inHeight, unsigned char const * cons
     fwrite(inPixels, 1, pixelByteSize, fp);
     fclose(fp);
     free(bmp);
+}
+
+/** Return image data from bitmap file at given path. Not really correctly implemented for all kinds of bitmaps.
+ * 
+ * - See: http://stackoverflow.com/questions/14279242/read-bitmap-file-into-structure#14279511
+ */
+unsigned char * Bmp_read(char const * const inFilePath)
+{
+    assert(!Sys_is_big_endian());
+    assert(inFilePath!=NULL);
+
+    unsigned char * imgData = NULL;
+    FILE* filePtr = NULL;
+    struct FileHeader fileHeader;
+    struct BitmapInfoHeader infoHeader;
+
+    filePtr = fopen(inFilePath, "rb");
+    if(filePtr==NULL)
+    {
+        return NULL;
+    }
+
+    fread(&fileHeader, sizeof(struct FileHeader), 1, filePtr);
+
+    if(fileHeader.signature[0]!='B' || fileHeader.signature[1]!='M')
+    {
+        fclose(filePtr);
+        return NULL;
+    }
+
+    fread(&infoHeader, sizeof(struct BitmapInfoHeader), 1, filePtr);
+
+    fseek(filePtr, fileHeader.fileOffsetToPixelArr, SEEK_SET);
+
+    imgData = (unsigned char *)malloc(infoHeader.imgSize);
+    if (imgData==NULL)
+    {
+        fclose(filePtr);
+        return NULL;
+    }
+
+    fread(imgData, infoHeader.imgSize, 1, filePtr);
+
+    if(infoHeader.height>0)
+    {
+        flipVertically(imgData, infoHeader.width, infoHeader.height);
+    }
+    
+    fclose(filePtr);
+    return imgData;
 }

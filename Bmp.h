@@ -10,6 +10,8 @@ extern "C" {
 
 void Bmp_write(int const inWidth, int const inHeight, unsigned char const * const inPixels, char const * const inFilePath);
 
+unsigned char * Bmp_read(char const * const inFilePath);
+
 #ifdef __cplusplus
 }
 #endif
