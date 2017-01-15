@@ -15,7 +15,7 @@
 
 static int const WIDTH = 320;
 static int const HEIGHT = 240;
-static double const SCALE_FACTOR = 2.0;
+static double const SCALE_FACTOR = 4.0;
 
 static bool ang_left = false;
 static bool ang_right = false;
@@ -27,7 +27,7 @@ static bool pos_up = false;
 static bool pos_down = false;
 static bool fov_wider = false;
 static bool fov_narrower = false;
-static int const GAME_LOOP_INTERVAL = 40; // 1000/25 ms.
+#define GAME_LOOP_INTERVAL 40 // 1000/25 ms.
 //
 static void update()
 {
@@ -102,19 +102,28 @@ void render(double const inLag)
  * - See: http://gameprogrammingpatterns.com/game-loop.html
  */
 static void onGameLoop()
-{
-    static double const MS_PER_UPDATE = 40.0/*GAME_LOOP_INTERVAL*/;//16.0; // 1000/60 ms.
+{   
+    static double const MS_PER_UPDATE = GAME_LOOP_INTERVAL;//16.0; // 1000/60 ms.
     
+    static uint64_t frameCountStartTime = 0;
+    static int frameCount = 0;
     static uint64_t previous = 0;
     static double lag = 0.0;
-
-    if(previous==0)
+    
+    uint64_t const current = Sys_get_posix_clock_time_ms();
+    
+    if(frameCountStartTime==0)
     {
-        previous = Sys_get_posix_clock_time_ms();
+        frameCountStartTime = current;
+        frameCount = 0;
     }
     
-    uint64_t const current = Sys_get_posix_clock_time_ms(),
-        elapsed = current - previous;
+    if(previous==0)
+    {
+        previous = current;
+    }
+    
+    uint64_t const elapsed = current - previous;
     
     previous = current;
     lag += (double)elapsed;
@@ -128,6 +137,15 @@ static void onGameLoop()
     }
 
     render(lag/MS_PER_UPDATE);
+    ++frameCount;
+
+    uint64_t const frameCountElapsed = Sys_get_posix_clock_time_ms()-frameCountStartTime;
+    
+    if(frameCountElapsed>=1000)
+    {
+        Sys_log_line(true, true, "FPS: %f.", (1000.0*(double)frameCount)/(double)frameCountElapsed);
+        frameCountStartTime = 0; // (frameCount gets reset above during next run)
+    }
 }
 
 static void charToFunc(char const inChar, bool const inVal)
