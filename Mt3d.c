@@ -217,7 +217,7 @@ static void fillPixel(struct Mt3d const * const inObj, enum CellType const inCel
     }   
 }
 
-void Mt3d_draw(struct Mt3d * const inObj)
+void Mt3d_draw(struct Mt3d * const inOutObj)
 {
     // Cell coordinates     Cartesian coordinates
     //
@@ -236,16 +236,21 @@ void Mt3d_draw(struct Mt3d * const inObj)
     // => yCartesian = heightCell-1-yCell
     // => yCell      = heightCell-1-yCartesian
     
-    double const kPosY = (double)(inObj->map->height-1)-inObj->posY;
-    
-    for(int y = 0;y<inObj->height;++y)
+    if(inOutObj->floorY==-1) // <=> Invalid.
     {
-        int const truncPosX = (int)inObj->posX,
-            truncPosY = (int)inObj->posY,
-            rowByWidth = y*inObj->width;
-        uint32_t * const rowPix = (uint32_t*)inObj->pixels+rowByWidth;
+        inOutObj->floorY = getFloorYandFill(inOutObj->width, inOutObj->height, inOutObj->alpha, inOutObj->beta, inOutObj->h, inOutObj->d, inOutObj->e, inOutObj->eta); // Late calculation to avoid unnecessary performance bottlenecks.
+    }
+    
+    double const kPosY = (double)(inOutObj->map->height-1)-inOutObj->posY;
+    
+    for(int y = 0;y<inOutObj->height;++y)
+    {
+        int const truncPosX = (int)inOutObj->posX,
+            truncPosY = (int)inOutObj->posY,
+            rowByWidth = y*inOutObj->width;
+        uint32_t * const rowPix = (uint32_t*)inOutObj->pixels+rowByWidth;
         
-        for(int x = 0;x<inObj->width;++x)
+        for(int x = 0;x<inOutObj->width;++x)
         {   
             double deltaX = 0.0,
                 deltaY = 0.0,
@@ -256,9 +261,9 @@ void Mt3d_draw(struct Mt3d * const inObj)
             int const pos = rowByWidth+x;
             
             {
-                double const zetaUnchecked = inObj->eta[pos]+inObj->gamma; // (might be out of expected range, see usage below)
+                double const zetaUnchecked = inOutObj->eta[pos]+inOutObj->gamma; // (might be out of expected range, see usage below)
 
-                Calc_fillDeltas(CALC_ANGLE_TO_POS(zetaUnchecked), inObj->d[pos], &deltaX, &deltaY); // MT_TODO: TEST: Seems to be a performance bottleneck!
+                Calc_fillDeltas(CALC_ANGLE_TO_POS(zetaUnchecked), inOutObj->d[pos], &deltaX, &deltaY); // MT_TODO: TEST: Seems to be a performance bottleneck!
             }
             
             assert(deltaX!=0.0); // MT_TODO: TEST: Implement special case! 
@@ -267,13 +272,13 @@ void Mt3d_draw(struct Mt3d * const inObj)
             
             // Get coordinates of cell where the line/"ray" reaches either floor or ceiling:
             //
-            int const dCellX = (int)(deltaX+inObj->posX),
-                dCellY = (int)((double)(inObj->map->height-1)-(deltaY+kPosY)); // Cartesian Y to cell Y coordinate conversion.
+            int const dCellX = (int)(deltaX+inOutObj->posX),
+                dCellY = (int)((double)(inOutObj->map->height-1)-(deltaY+kPosY)); // Cartesian Y to cell Y coordinate conversion.
             
             if((cellX==dCellX)&&(cellY==dCellY)) // Line/"ray" hits floor or ceiling in current/player's cell.
             {            
-                countLen = inObj->e[pos];
-                fillPixel(inObj, (enum CellType)inObj->map->cells[cellY*inObj->map->width+cellX], y, colPix);
+                countLen = inOutObj->e[pos];
+                fillPixel(inOutObj, (enum CellType)inOutObj->map->cells[cellY*inOutObj->map->width+cellX], y, colPix);
             }
             else
             {
@@ -286,13 +291,13 @@ void Mt3d_draw(struct Mt3d * const inObj)
                 
                 // Store last reached coordinates for brightness (and more) calculations:
                 //
-                double lastX = inObj->posX,
+                double lastX = inOutObj->posX,
                     kLastY = kPosY; // (Cartesian Y coordinate)
                 
                 // Values to represent line in Slope-intercept form:
                 //
                 double const m = deltaY/deltaX, // Slope
-                    b = kPosY-m*inObj->posX; // Y-intercept
+                    b = kPosY-m*inOutObj->posX; // Y-intercept
                 
                 do
                 {   
@@ -326,10 +331,10 @@ void Mt3d_draw(struct Mt3d * const inObj)
                         xForHit += addX;
                     }
                     
-                    assert(cellX>=0 && cellX<inObj->map->width);
-                    assert(cellY>=0 && cellY<inObj->map->height);
+                    assert(cellX>=0 && cellX<inOutObj->map->width);
+                    assert(cellY>=0 && cellY<inOutObj->map->height);
                     
-                    enum CellType const cellType = (enum CellType)inObj->map->cells[cellY*inObj->map->width+cellX];
+                    enum CellType const cellType = (enum CellType)inOutObj->map->cells[cellY*inOutObj->map->width+cellX];
                     
                     noHit = cellX!=dCellX || cellY!=dCellY; // noHit = false => Last cell is reached, where line/"ray" (at least theoretically) hits either floor or ceiling.
                     
@@ -338,16 +343,16 @@ void Mt3d_draw(struct Mt3d * const inObj)
                         case CellType_block_default: // Line/"ray" hits block's surface.
                         {
                             double const diffY = kLastY-kPosY,
-                                diffX = lastX-inObj->posX,
+                                diffX = lastX-inOutObj->posX,
                                 diffXY = sqrt(diffY*diffY+diffX*diffX);
                             
                             noHit = false;
-                            countLen = diffXY*inObj->e[pos]/inObj->d[pos];
-                            fillPixel(inObj, CellType_block_default, y, colPix);
+                            countLen = diffXY*inOutObj->e[pos]/inOutObj->d[pos];
+                            fillPixel(inOutObj, CellType_block_default, y, colPix);
                             
                             {
                                 double const opposite = sqrt(countLen*countLen-diffXY*diffXY);
-                                double imgX = nextX?(double)(inObj->map->height-1)-kLastY:lastX, // (Cartesian Y to cell Y coordinate conversion, if necessary)
+                                double imgX = nextX?(double)(inOutObj->map->height-1)-kLastY:lastX, // (Cartesian Y to cell Y coordinate conversion, if necessary)
                                     imgY = opposite;
 
                                 imgX -= (double)((int)imgX); // Removes integer part.
@@ -367,22 +372,22 @@ void Mt3d_draw(struct Mt3d * const inObj)
                                 }
                                 assert(imgX>=0.0 && imgX<1.0);
 
-                                if(y<inObj->floorY)
+                                if(y<inOutObj->floorY)
                                 {
-                                    imgY += CEILING_HEIGHT*inObj->h;
+                                    imgY += CEILING_HEIGHT*inOutObj->h;
                                 }
                                 else
                                 {
-                                    imgY = CEILING_HEIGHT*inObj->h-imgY;
+                                    imgY = CEILING_HEIGHT*inOutObj->h-imgY;
                                 }
                                 imgY = CEILING_HEIGHT-imgY;
                                 assert(imgY>=0.0 && imgY<1.0);
 
                                 {
-                                    int const row = (int)((double)inObj->sampleBmpH*imgY),
-                                        col = (int)((double)inObj->sampleBmpH*imgX);
+                                    int const row = (int)((double)inOutObj->sampleBmpH*imgY),
+                                        col = (int)((double)inOutObj->sampleBmpH*imgX);
                                     
-                                    unsigned char const * const channelZeroPtr = inObj->sampleBmpPix+3*sizeof(char)*inObj->sampleBmpW*row+3*sizeof(char)*col;
+                                    unsigned char const * const channelZeroPtr = inOutObj->sampleBmpPix+3*sizeof(char)*inOutObj->sampleBmpW*row+3*sizeof(char)*col;
                                     
                                     colPix[0] = channelZeroPtr[0];
                                     colPix[1] = channelZeroPtr[1];
@@ -409,8 +414,8 @@ void Mt3d_draw(struct Mt3d * const inObj)
                         case CellType_floor_exit:
                             if(!noHit) // Line/"ray" hits floor or ceiling.
                             {
-                                countLen = inObj->e[pos];
-                                fillPixel(inObj, cellType, y, colPix);
+                                countLen = inOutObj->e[pos];
+                                fillPixel(inOutObj, cellType, y, colPix);
                             }
                             //
                             // Otherwise: Line/"ray" passes through current cell to the next.
@@ -429,8 +434,8 @@ void Mt3d_draw(struct Mt3d * const inObj)
             {
                 assert(countLen!=-1.0);
 
-                double const brightness = (inObj->map->maxVisible-fmin(countLen, inObj->map->maxVisible))/inObj->map->maxVisible; // countLen 0 = 1.0, countLen maxVisible = 0.0;
-                int const sub = (int)((inObj->map->maxDarkness*255.0)*(1.0-brightness)+0.5), // Rounds
+                double const brightness = (inOutObj->map->maxVisible-fmin(countLen, inOutObj->map->maxVisible))/inOutObj->map->maxVisible; // countLen 0 = 1.0, countLen maxVisible = 0.0;
+                int const sub = (int)((inOutObj->map->maxDarkness*255.0)*(1.0-brightness)+0.5), // Rounds
                     r = (int)colPix[2]-sub,
                     g = (int)colPix[1]-sub,
                     blue = (int)colPix[0]-sub;
@@ -467,7 +472,7 @@ void Mt3d_delete(struct Mt3d * const inObj)
 
 void Mt3d_update(double const inAlpha, double const inBeta, double const inH, struct Mt3d * const inOutObj)
 {
-    inOutObj->floorY = getFloorYandFill(inOutObj->width, inOutObj->height, inAlpha, inBeta, inH, inOutObj->d, inOutObj->e, inOutObj->eta);
+    inOutObj->floorY = -1; // Invalidates to trigger late getFloorYandFill() call by Mt3d_draw(), when needed.
     inOutObj->alpha = inAlpha;
     inOutObj->beta = inBeta;
     inOutObj->h = inH;
