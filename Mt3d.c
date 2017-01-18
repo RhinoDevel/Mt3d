@@ -173,7 +173,7 @@ bool Mt3d_pos_leftOrRight(struct Mt3d * const inOutObj, bool inLeft)
     return posStep(inOutObj, CALC_ANGLE_TO_POS(inOutObj->gamma+(inLeft?1.0:-1.0)*M_PI_2));
 }
 
-static void fillPixel(struct Mt3d const * const inObj, enum CellType const inCellType, int const inY, uint8_t * const inOutPix)
+static inline void fillPixel(struct Mt3d const * const inObj, enum CellType const inCellType, int const inY, uint8_t * const inOutPix)
 {
     switch(inCellType)
     {
@@ -215,6 +215,23 @@ static void fillPixel(struct Mt3d const * const inObj, enum CellType const inCel
             assert(false);
             break;
     }   
+}
+
+/** Set brightness based on map constants and line length from player.
+ */
+static inline void setBrightness(double const inCountLen, double const inMaxVisible, double const inMaxDarkness, unsigned char inOutPix[3])
+{
+    assert(inCountLen!=-1.0);
+
+    double const brightness = (inMaxVisible-fmin(inCountLen, inMaxVisible))/inMaxVisible; // inCountLen 0 = 1.0, inCountLen maxVisible = 0.0;
+    int const sub = (int)((inMaxDarkness*255.0)*(1.0-brightness)+0.5), // Rounds
+        r = (int)inOutPix[2]-sub,
+        g = (int)inOutPix[1]-sub,
+        b = (int)inOutPix[0]-sub;
+
+    inOutPix[2] = r>0?(unsigned char)r:0;
+    inOutPix[1] = g>0?(unsigned char)g:0;
+    inOutPix[0] = b>0?(unsigned char)b:0;
 }
 
 void Mt3d_draw(struct Mt3d * const inOutObj)
@@ -428,22 +445,7 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                     }
                 }while(noHit);
             }
-
-            // Set brightness based on map constants and line length from player:
-            //
-            {
-                assert(countLen!=-1.0);
-
-                double const brightness = (inOutObj->map->maxVisible-fmin(countLen, inOutObj->map->maxVisible))/inOutObj->map->maxVisible; // countLen 0 = 1.0, countLen maxVisible = 0.0;
-                int const sub = (int)((inOutObj->map->maxDarkness*255.0)*(1.0-brightness)+0.5), // Rounds
-                    r = (int)colPix[2]-sub,
-                    g = (int)colPix[1]-sub,
-                    blue = (int)colPix[0]-sub;
-
-                colPix[2] = r>0?(unsigned char)r:0;
-                colPix[1] = g>0?(unsigned char)g:0;
-                colPix[0] = blue>0?(unsigned char)blue:0;
-            }
+            setBrightness(countLen, inOutObj->map->maxVisible, inOutObj->map->maxDarkness, colPix);
         }
     }
 }
