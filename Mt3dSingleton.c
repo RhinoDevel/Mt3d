@@ -76,7 +76,7 @@ bool Mt3dSingleton_pos_up()
     {
         h = H_MAX;
     }
-    Mt3d_update(o->alpha, o->beta, h, o);
+    Mt3d_setValues(o->alpha, o->beta, h, o);
     return true;
 }
 bool Mt3dSingleton_pos_down()
@@ -95,7 +95,7 @@ bool Mt3dSingleton_pos_down()
     {
         h = H_MIN;
     }
-    Mt3d_update(o->alpha, o->beta, h, o);
+    Mt3d_setValues(o->alpha, o->beta, h, o);
     return true;
 }
 bool Mt3dSingleton_fov_wider()
@@ -114,7 +114,7 @@ bool Mt3dSingleton_fov_wider()
     {
         alpha = ALPHA_MAX;
     }
-    Mt3d_update(alpha, getBeta(alpha), o->h, o);
+    Mt3d_setValues(alpha, getBeta(alpha), o->h, o);
     return true;
 }
 bool Mt3dSingleton_fov_narrower()
@@ -133,7 +133,7 @@ bool Mt3dSingleton_fov_narrower()
     {
         alpha = ALPHA_MIN;
     }
-    Mt3d_update(alpha, getBeta(alpha), o->h, o);
+    Mt3d_setValues(alpha, getBeta(alpha), o->h, o);
     return true;
 }
 
@@ -154,13 +154,19 @@ unsigned char * Mt3dSingleton_getPixels()
     return o->pixels;
 }
 
+void Mt3dSingleton_update()
+{
+    assert(o!=NULL);
+    Mt3d_update(o);
+}
+
 void Mt3dSingleton_draw()
 {
     assert(o!=NULL);
     Mt3d_draw(o);
 }
 
-void Mt3dSingleton_init(int const inWidth, int const inHeight)
+void Mt3dSingleton_init(int const inWidth, int const inHeight, int const inMsPerUpdate)
 {
     assert(width==0);
     assert(height==0);
@@ -171,7 +177,7 @@ void Mt3dSingleton_init(int const inWidth, int const inHeight)
     
     width = inWidth;
     height = inHeight;
-    o = Mt3d_create(inWidth, height, ALPHA, getBeta(ALPHA), H);
+    o = Mt3d_create(inWidth, height, ALPHA, getBeta(ALPHA), H, inMsPerUpdate);
     
     o->map = MapSample_create();
     assert(sizeof *o->pixels==1);

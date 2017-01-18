@@ -23,8 +23,9 @@ bool Mt3dSingleton_fov_narrower();
 
 unsigned char * Mt3dSingleton_getPixels();
 
+void Mt3dSingleton_update();
 void Mt3dSingleton_draw();
-void Mt3dSingleton_init(int const inWidth, int const inHeight);
+void Mt3dSingleton_init(int const inWidth, int const inHeight, int const inMsPerUpdate);
 void Mt3dSingleton_deinit();
 
 #ifdef __cplusplus

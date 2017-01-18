@@ -13,9 +13,11 @@
 #include "Mt3dSingleton.h"
 #include "GuiSingleton_cairo.h"
 
-static int const WIDTH = 640;
-static int const HEIGHT = 480;
-static double const SCALE_FACTOR = 1.0;
+static int const WIDTH = 320;
+static int const HEIGHT = 240;
+static double const SCALE_FACTOR = 2.0;
+static double const GAME_LOOP_INTERVAL = 40.0;
+static double const MS_PER_UPDATE = 40.0;/*GAME_LOOP_INTERVAL*/;//16.0; // 1000/60 ms.
 
 static bool ang_left = false;
 static bool ang_right = false;
@@ -27,7 +29,6 @@ static bool pos_up = false;
 static bool pos_down = false;
 static bool fov_wider = false;
 static bool fov_narrower = false;
-#define GAME_LOOP_INTERVAL 40 // 1000/25 ms.
 //
 static void update()
 {
@@ -90,6 +91,8 @@ static void update()
             Mt3dSingleton_fov_narrower();
         }
     }
+    
+    Mt3dSingleton_update();
 }
 //
 void render(double const inLag)
@@ -104,8 +107,6 @@ void render(double const inLag)
  */
 static void onGameLoop()
 {   
-    static double const MS_PER_UPDATE = GAME_LOOP_INTERVAL;//16.0; // 1000/60 ms.
-    
     static uint64_t frameCountStartTime = 0;
     static int frameCount = 0;
     static uint64_t previous = 0;
@@ -206,8 +207,8 @@ static void onCharRelease(char const inChar)
 }
 
 int main(int argc, char *argv[])
-{
-    Mt3dSingleton_init(WIDTH, HEIGHT); // Initializes 3D controller singleton.
+{   
+    Mt3dSingleton_init(WIDTH, HEIGHT, (int)MS_PER_UPDATE); // Initializes 3D controller singleton. // Truncates
     
     // Initialize and give control to GUI singleton (easily replaceable by some other GUI singleton):
     //

@@ -3,7 +3,6 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <assert.h>
 #include <math.h>
 
@@ -16,6 +15,14 @@
 static const double CEILING_HEIGHT = 1.0; // 1.0 = Height equals length of one floor/ceiling cell.
 static const double PLAYER_STEP_LEN = 0.2; // Cell lengths.
 static double const PLAYER_ANG_STEP = CALC_TO_RAD(5.0);
+
+/** Return current second of game time.
+ *
+ */
+static uint64_t getSecond(struct Mt3d const * const inObj)
+{
+    return (inObj->updateCount*(uint64_t)inObj->msPerUpdate)/1000;
+}
 
 static int getFloorYandFill(
     int const inWidth,
@@ -205,9 +212,18 @@ static inline void fillPixel(struct Mt3d const * const inObj, enum CellType cons
             }
             else
             {
-                inOutPix[2] = 0;
-                inOutPix[1] = 0xFF;
-                inOutPix[0] = 0xFF;   
+                if(getSecond(inObj)%2)
+                {
+                    inOutPix[2] = 0;
+                    inOutPix[1] = 0xFF;
+                    inOutPix[0] = 0xFF; 
+                }
+                else
+                {
+                    inOutPix[2] = 0xFF;
+                    inOutPix[1] = 0;
+                    inOutPix[0] = 0xFF; 
+                }
             }
             break;
 
@@ -232,6 +248,11 @@ static inline void setBrightness(double const inCountLen, double const inMaxVisi
     inOutPix[2] = r>0?(unsigned char)r:0;
     inOutPix[1] = g>0?(unsigned char)g:0;
     inOutPix[0] = b>0?(unsigned char)b:0;
+}
+
+void Mt3d_update(struct Mt3d * const inOutObj)
+{
+    ++inOutObj->updateCount;
 }
 
 void Mt3d_draw(struct Mt3d * const inOutObj)
@@ -472,7 +493,7 @@ void Mt3d_delete(struct Mt3d * const inObj)
     free(inObj);
 }
 
-void Mt3d_update(double const inAlpha, double const inBeta, double const inH, struct Mt3d * const inOutObj)
+void Mt3d_setValues(double const inAlpha, double const inBeta, double const inH, struct Mt3d * const inOutObj)
 {
     inOutObj->floorY = -1; // Invalidates to trigger late getFloorYandFill() call by Mt3d_draw(), when needed.
     inOutObj->alpha = inAlpha;
@@ -482,7 +503,7 @@ void Mt3d_update(double const inAlpha, double const inBeta, double const inH, st
     //Deb_line("Alpha = %f degree, beta = %f degree, h(-eight) = %f cell length.", CALC_TO_DEG(inAlpha), CALC_TO_DEG(inBeta), inH)
 }
 
-struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, double const inAlpha, double const inBeta, double const inH)
+struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, double const inAlpha, double const inBeta, double const inH, int const inMsPerUpdate)
 {
     struct Mt3d * const retVal = malloc(sizeof *retVal);
     assert(retVal!=NULL);
@@ -499,6 +520,9 @@ struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, double const in
     
     struct Mt3d const buf = (struct Mt3d)
     {
+        .msPerUpdate = inMsPerUpdate,
+        .updateCount = 0,
+        
         .width = inWidth,
         .height = inHeight,
         .alpha = 0.0, // Invalidates
@@ -524,7 +548,7 @@ struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, double const in
 
     memcpy(retVal, &buf, sizeof *retVal);
 
-    Mt3d_update(inAlpha, inBeta, inH, retVal);
+    Mt3d_setValues(inAlpha, inBeta, inH, retVal);
     
     return retVal;
 }

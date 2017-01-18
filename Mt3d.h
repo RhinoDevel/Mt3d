@@ -5,6 +5,7 @@
 #define MT_3D
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "Map.h"
 
@@ -17,6 +18,9 @@ struct Mt3d
     // ***********************
     // *** INPUT CONSTANTS ***
     // ***********************
+    
+    int const msPerUpdate;// Milliseconds of game time per update call.
+    uint64_t updateCount; // Elapsed steps of game time (updateCount * msPerUpdate = elapsed milliseconds of game time).
     
     // Pixel resolution:
     //
@@ -60,10 +64,11 @@ struct Mt3d
 bool Mt3d_ang_leftOrRight(struct Mt3d * const inOutObj, bool inLeft);
 bool Mt3d_pos_forwardOrBackward(struct Mt3d * const inOutObj, bool inForward);
 bool Mt3d_pos_leftOrRight(struct Mt3d * const inOutObj, bool inLeft);
+void Mt3d_update(struct Mt3d * const inOutObj);
 void Mt3d_draw(struct Mt3d * const inOutObj);
 void Mt3d_delete(struct Mt3d * const inObj);
-void Mt3d_update(double const inAlpha, double const inBeta, double const inH, struct Mt3d * const inOutObj);
-struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, double const inAlpha, double const inBeta, double const inH);
+void Mt3d_setValues(double const inAlpha, double const inBeta, double const inH, struct Mt3d * const inOutObj);
+struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, double const inAlpha, double const inBeta, double const inH, int const inMsPerUpdate);
 
 #ifdef __cplusplus
 }
