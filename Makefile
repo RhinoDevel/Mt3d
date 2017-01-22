@@ -6,7 +6,7 @@ CC=gcc
 #CFLAGS=-c -O3 -std=gnu11 -Wall `pkg-config gtk+-3.0 --cflags` -std=gnu11 -DNDEBUG 
 CFLAGS=-c -g -std=gnu11 -Wall `pkg-config gtk+-3.0 --cflags` -std=gnu11
 LDFLAGS=-lm `pkg-config gtk+-3.0 --libs`
-SOURCES=main.c Mt3dSingleton.c GuiSingleton_cairo.c Mt3d.c Map.c MapSample.c Sys.c Calc.c Bmp.c
+SOURCES=main.c Mt3dSingleton.c GuiSingleton_cairo.c Mt3d.c Mt3dInput.c Map.c MapSample.c Sys.c Calc.c Bmp.c
 OBJECTS=$(SOURCES:.c=.o)
 EXECUTABLE=mt3d
 

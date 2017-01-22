@@ -10,19 +10,10 @@
 extern "C" {
 #endif
 
-bool Mt3dSingleton_ang_left();
-bool Mt3dSingleton_ang_right();
-bool Mt3dSingleton_pos_left();
-bool Mt3dSingleton_pos_right();
-bool Mt3dSingleton_pos_forward();
-bool Mt3dSingleton_pos_backward();
-bool Mt3dSingleton_pos_up();
-bool Mt3dSingleton_pos_down();
-bool Mt3dSingleton_fov_wider();
-bool Mt3dSingleton_fov_narrower();
-
 unsigned char * Mt3dSingleton_getPixels();
 
+void Mt3dSingleton_input_onKeyPress(char const inChar);
+void Mt3dSingleton_input_onKeyRelease(char const inChar);
 void Mt3dSingleton_update();
 void Mt3dSingleton_draw();
 void Mt3dSingleton_init(int const inWidth, int const inHeight, int const inMsPerUpdate);

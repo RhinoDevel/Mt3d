@@ -6,6 +6,7 @@
 
 #include "Calc.h"
 #include "Mt3d.h"
+#include "Mt3dInput.h"
 #include "MapSample.h"
 #include "Mt3dSingleton.h"
 
@@ -19,6 +20,7 @@ static double const H_MAX = 0.9;
 static double const H_STEP = 0.1;
 
 static struct Mt3d * o = NULL;
+static struct Mt3dInput * input = NULL;
 static int width = 0;
 static int height = 0;
 
@@ -30,37 +32,7 @@ static double getBeta(double const inAlpha)
     return 2.0*atan((double)height*tan(inAlpha/2.0)/(double)width);
 }
 
-bool Mt3dSingleton_ang_left()
-{
-    assert(o!=NULL);
-    return Mt3d_ang_leftOrRight(o, true);
-}
-bool Mt3dSingleton_ang_right()
-{
-    assert(o!=NULL);
-    return Mt3d_ang_leftOrRight(o, false);
-}
-bool Mt3dSingleton_pos_left()
-{
-    assert(o!=NULL);
-    return Mt3d_pos_leftOrRight(o, true);
-}
-bool Mt3dSingleton_pos_right()
-{
-    assert(o!=NULL);
-    return Mt3d_pos_leftOrRight(o, false);
-}
-bool Mt3dSingleton_pos_forward()
-{
-    assert(o!=NULL);
-    return Mt3d_pos_forwardOrBackward(o, true);
-}
-bool Mt3dSingleton_pos_backward()
-{
-    assert(o!=NULL);
-    return Mt3d_pos_forwardOrBackward(o, false);
-}
-bool Mt3dSingleton_pos_up()
+static bool pos_up()
 {
     assert(o!=NULL);
     
@@ -79,7 +51,7 @@ bool Mt3dSingleton_pos_up()
     Mt3d_setValues(o->alpha, o->beta, h, o);
     return true;
 }
-bool Mt3dSingleton_pos_down()
+static bool pos_down()
 {
     assert(o!=NULL);
     
@@ -98,7 +70,7 @@ bool Mt3dSingleton_pos_down()
     Mt3d_setValues(o->alpha, o->beta, h, o);
     return true;
 }
-bool Mt3dSingleton_fov_wider()
+static bool fov_wider()
 {
     double alpha = 0.0;
     
@@ -117,7 +89,7 @@ bool Mt3dSingleton_fov_wider()
     Mt3d_setValues(alpha, getBeta(alpha), o->h, o);
     return true;
 }
-bool Mt3dSingleton_fov_narrower()
+static bool fov_narrower()
 {
     double alpha = 0.0;
     
@@ -137,6 +109,51 @@ bool Mt3dSingleton_fov_narrower()
     return true;
 }
 
+static void applyInput()
+{
+    assert(input!=NULL);
+    assert(o!=NULL);
+    
+    if(input->pos_left!=input->pos_right)
+    {
+        Mt3d_pos_leftOrRight(o, input->pos_left); // (return value ignored)
+    }
+    
+    if(input->pos_forward!=input->pos_backward)
+    {
+        Mt3d_pos_forwardOrBackward(o,  input->pos_forward); // (return value ignored)
+    }
+   
+    if(input->ang_left!=input->ang_right)
+    {
+        Mt3d_ang_leftOrRight(o, input->ang_left); // (return value ignored)
+    }
+    
+    if(input->pos_up!=input->pos_down)
+    {
+        if(input->pos_up)
+        {
+            pos_up(); // (return value ignored)
+        }
+        else
+        {
+            pos_down(); // (return value ignored)
+        }
+    }
+    
+    if(input->fov_wider!=input->fov_narrower)
+    {
+        if(input->fov_wider)
+        {
+            fov_wider(); // (return value ignored)
+        }
+        else
+        {
+            fov_narrower(); // (return value ignored)
+        }
+    }
+}
+
 int Mt3dSingleton_getWidth()
 {
     assert(o!=NULL);
@@ -154,9 +171,19 @@ unsigned char * Mt3dSingleton_getPixels()
     return o->pixels;
 }
 
+void Mt3dSingleton_input_onKeyPress(char const inChar)
+{
+    Mt3dInput_setFlagByChar(inChar, true, input); // (return value ignored)
+}
+void Mt3dSingleton_input_onKeyRelease(char const inChar)
+{    
+    Mt3dInput_setFlagByChar(inChar, false, input); // (return value ignored)
+}
+
 void Mt3dSingleton_update()
 {
     assert(o!=NULL);
+    applyInput();
     Mt3d_update(o);
 }
 
@@ -171,9 +198,12 @@ void Mt3dSingleton_init(int const inWidth, int const inHeight, int const inMsPer
     assert(width==0);
     assert(height==0);
     assert(o==NULL);
+    assert(input==NULL);
     
     assert(inWidth>0);
     assert(inHeight>0);
+    
+    input = Mt3dInput_create();
     
     width = inWidth;
     height = inHeight;
@@ -211,10 +241,14 @@ void Mt3dSingleton_deinit()
     assert(o!=NULL);
     assert(o->map!=NULL);
     assert(o->pixels!=NULL);
+    assert(input!=NULL);
     
     Map_delete(o->map);
     o->map = NULL;
     free(o->pixels);
     o->pixels = NULL;
     Mt3d_delete(o);
+    o = NULL;
+    Mt3dInput_delete(input);
+    input = NULL;
 }
