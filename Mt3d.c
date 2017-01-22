@@ -425,24 +425,12 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                                     int const row = (int)((double)inOutObj->sampleBmpH*imgY),
                                         col = (int)((double)inOutObj->sampleBmpH*imgX);
                                     
-                                    unsigned char const * const channelZeroPtr = inOutObj->sampleBmpPix+3*sizeof(char)*inOutObj->sampleBmpW*row+3*sizeof(char)*col;
+                                    unsigned char const * const channelZeroPtr = inOutObj->sampleBmpPix+3*inOutObj->sampleBmpW*row+3*col;
                                     
                                     colPix[0] = channelZeroPtr[0];
                                     colPix[1] = channelZeroPtr[1];
                                     colPix[2] = channelZeroPtr[2];
                                 }
-//                                if(imgY>0.25&&imgY<0.35)
-//                                {
-//                                    colPix[2] = 0;
-//                                    colPix[1] = 0;
-//                                    colPix[0] = 0;
-//                                }
-//                                if(imgX>0.25&&imgX<0.35)
-//                                {
-//                                    colPix[2] = 0xFF;
-//                                    colPix[1] = 0xFF;
-//                                    colPix[0] = 0xFF;
-//                                }
                             }
 
                             break;
