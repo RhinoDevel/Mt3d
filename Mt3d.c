@@ -518,7 +518,7 @@ struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, double const in
     double * const eta = malloc(pixelCount*sizeof *eta);
     assert(eta!=NULL);
     
-    struct Mt3d const buf = (struct Mt3d)
+    struct Mt3d /*const*/ buf = (struct Mt3d)
     {
         .msPerUpdate = inMsPerUpdate,
         .updateCount = 0,
@@ -541,11 +541,13 @@ struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, double const in
         .map = NULL,
         .pixels = NULL,
             
-        .sampleBmpPix = Bmp_read("gradient-redblue-120x120.bmp"),
-        .sampleBmpW = 120,
-        .sampleBmpH = 120,
+        .sampleBmpPix = NULL,
+        .sampleBmpW = -1,
+        .sampleBmpH = -1,
     };
 
+    buf.sampleBmpPix = Bmp_read("gradient-redblue-120x120.bmp", &buf.sampleBmpW, &buf.sampleBmpH);
+    
     memcpy(retVal, &buf, sizeof *retVal);
 
     Mt3d_setValues(inAlpha, inBeta, inH, retVal);

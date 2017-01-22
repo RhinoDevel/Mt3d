@@ -107,16 +107,21 @@ void Bmp_write(int const inWidth, int const inHeight, unsigned char const * cons
  * 
  * - See: http://stackoverflow.com/questions/14279242/read-bitmap-file-into-structure#14279511
  */
-unsigned char * Bmp_read(char const * const inFilePath)
+unsigned char * Bmp_read(char const * const inFilePath, int * const inOutWidth, int * const inOutHeight)
 {
     assert(!Sys_is_big_endian());
     assert(inFilePath!=NULL);
+    assert(inOutWidth!=NULL);
+    assert(inOutHeight!=NULL);
 
     unsigned char * imgData = NULL;
     FILE* filePtr = NULL;
     struct FileHeader fileHeader;
     struct BitmapInfoHeader infoHeader;
 
+    *inOutWidth = -1;
+    *inOutHeight = -1;
+    
     filePtr = fopen(inFilePath, "rb");
     if(filePtr==NULL)
     {
@@ -150,5 +155,7 @@ unsigned char * Bmp_read(char const * const inFilePath)
     }
     
     fclose(filePtr);
+    *inOutWidth = infoHeader.width;
+    *inOutHeight = abs(infoHeader.height);
     return imgData;
 }
