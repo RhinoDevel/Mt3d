@@ -141,7 +141,7 @@ static bool posStep(struct Mt3d * const inOutObj, double const inIota) // Iota: 
         x = inOutObj->posX,
         y = inOutObj->posY;
     
-    Calc_fillDeltas(inIota, PLAYER_STEP_LEN, &addX, &subY);
+    Calc_fillDeltas(inIota, PLAYER_STEP_LEN, &addX, &subY); // MT_TODO: TEST: Assertion "assert(inAngle>=0.0 && inAngle<Calc_PiMul2);" from Calc_fillDeltas() implementation can fail, here (very rare)!
     
     x += addX;
     y -= subY; // Subtraction, because cell coordinate system starts on top, Cartesian coordinate system at bottom.
