@@ -14,6 +14,7 @@ struct Mt3dInput
 {
     // *** FLAGS SIGNALIZING PRESSED KEYS ***
     
+    bool quit;
     bool ang_left;
     bool ang_right;
     bool pos_forward;
