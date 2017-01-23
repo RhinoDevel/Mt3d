@@ -24,7 +24,7 @@ static void render(double const inLag)
 
 int main(int argc, char *argv[])
 {   
-    Mt3dSingleton_init(WIDTH, HEIGHT, (int)MS_PER_UPDATE); // Initializes 3D controller singleton. // Truncates
+    Mt3dSingleton_init(WIDTH, HEIGHT, (int)MS_PER_UPDATE, GuiSingleton_cairo_quit); // Initializes 3D controller singleton. // Truncates
     LoopSingleton_init(MS_PER_UPDATE, Mt3dSingleton_update, render);
     
     // Initialize and give control to GUI singleton (easily replaceable by some other GUI singleton):

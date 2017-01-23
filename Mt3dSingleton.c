@@ -23,6 +23,7 @@ static struct Mt3d * o = NULL;
 static struct Mt3dInput * input = NULL;
 static int width = 0;
 static int height = 0;
+static void (*quit)(void);
 
 static double getBeta(double const inAlpha)
 {
@@ -113,6 +114,12 @@ static void applyInput()
 {
     assert(input!=NULL);
     assert(o!=NULL);
+    assert(quit!=NULL);
+    
+    if(input->quit)
+    {
+        quit();
+    }
     
     if(input->pos_left!=input->pos_right)
     {
@@ -193,17 +200,19 @@ void Mt3dSingleton_draw()
     Mt3d_draw(o);
 }
 
-void Mt3dSingleton_init(int const inWidth, int const inHeight, int const inMsPerUpdate)
+void Mt3dSingleton_init(int const inWidth, int const inHeight, int const inMsPerUpdate, void (* const inQuit)(void))
 {
     assert(width==0);
     assert(height==0);
     assert(o==NULL);
     assert(input==NULL);
+    assert(quit==NULL);
     
     assert(inWidth>0);
     assert(inHeight>0);
     
     input = Mt3dInput_create();
+    quit = inQuit;
     
     width = inWidth;
     height = inHeight;
@@ -242,6 +251,7 @@ void Mt3dSingleton_deinit()
     assert(o->map!=NULL);
     assert(o->pixels!=NULL);
     assert(input!=NULL);
+    assert(quit!=NULL);
     
     Map_delete(o->map);
     o->map = NULL;
@@ -251,4 +261,5 @@ void Mt3dSingleton_deinit()
     o = NULL;
     Mt3dInput_delete(input);
     input = NULL;
+    quit = NULL;
 }
