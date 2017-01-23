@@ -64,6 +64,11 @@ void GuiSingleton_cairo_draw()
     gtk_widget_queue_draw(darea);
 }
 
+void GuiSingleton_cairo_quit()
+{
+    gtk_main_quit();
+}
+
 void GuiSingleton_cairo_init(
     int const inWidth,
     int const inHeight,
