@@ -19,6 +19,9 @@ bool Mt3dInput_setFlagByChar(char const inChar, bool const inVal, struct Mt3dInp
         case 'x':
             inOutObj->quit = inVal;
             break;
+        case 'f':
+            inOutObj->toggleFullscreen = inVal;
+            break;
         case 'a':
             inOutObj->ang_left = inVal;
             break;
@@ -72,6 +75,7 @@ struct Mt3dInput * Mt3dInput_create()
     struct Mt3dInput const buf = (struct Mt3dInput)
     {
         .quit = false,
+        .toggleFullscreen = false,
         .ang_left = false,
         .ang_right= false,
         .pos_forward= false,
