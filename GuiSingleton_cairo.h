@@ -12,6 +12,7 @@ extern "C" {
 
 void GuiSingleton_cairo_prepareForDirectDraw();
 void GuiSingleton_cairo_draw();
+void GuiSingleton_cairo_toggleFullscreen();
 void GuiSingleton_cairo_quit();
     
 void GuiSingleton_cairo_init(
