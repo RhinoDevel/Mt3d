@@ -16,7 +16,7 @@ void Mt3dSingleton_input_onKeyPress(char const inChar);
 void Mt3dSingleton_input_onKeyRelease(char const inChar);
 void Mt3dSingleton_update();
 void Mt3dSingleton_draw();
-void Mt3dSingleton_init(int const inWidth, int const inHeight, int const inMsPerUpdate, void (* const inQuit)(void));
+void Mt3dSingleton_init(int const inWidth, int const inHeight, int const inMsPerUpdate, void (* const inToggleFullscreen)(void), void (* const inQuit)(void));
 void Mt3dSingleton_deinit();
 
 #ifdef __cplusplus
