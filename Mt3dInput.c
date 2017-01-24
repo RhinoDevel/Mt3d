@@ -22,10 +22,10 @@ bool Mt3dInput_setFlagByChar(char const inChar, bool const inVal, struct Mt3dInp
         case 'f':
             inOutObj->toggleFullscreen = inVal;
             break;
-        case 'a':
+        case 'q':
             inOutObj->ang_left = inVal;
             break;
-        case 'd':
+        case 'e':
             inOutObj->ang_right = inVal;
             break;
         case 'w':
@@ -34,10 +34,10 @@ bool Mt3dInput_setFlagByChar(char const inChar, bool const inVal, struct Mt3dInp
         case 's':
             inOutObj->pos_backward = inVal;
             break;  
-        case 'q':
+        case 'a':
             inOutObj->pos_left = inVal;
             break;
-        case 'e':
+        case 'd':
             inOutObj->pos_right = inVal;
             break;  
         case 'l':
