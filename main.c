@@ -9,8 +9,8 @@
 #include "GuiSingleton_cairo.h"
 #include "LoopSingleton.h"
 
-static int const WIDTH = 320;
-static int const HEIGHT = 240;
+static int const WIDTH = 384;
+static int const HEIGHT = 216;
 static double const SCALE_FACTOR = 2.0;
 static double const GAME_LOOP_INTERVAL = 40.0;
 static double const MS_PER_UPDATE = 40.0;/*GAME_LOOP_INTERVAL*/;//16.0; // 1000/60 ms.
