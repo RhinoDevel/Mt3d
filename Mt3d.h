@@ -53,9 +53,9 @@ struct Mt3d
     
     double gamma; // Angle (radian) telling the player's view direction.
     
-    unsigned char * sampleBmpPix;
-    int sampleBmpW;
-    int sampleBmpH;
+    unsigned char * bmpPix[CellType_COUNT];
+    int bmpW[CellType_COUNT];
+    int bmpH[CellType_COUNT];
     
     struct Map * map; // Does NOT take ownership.
     unsigned char * pixels; // Does NOT take ownership.

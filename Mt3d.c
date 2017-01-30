@@ -180,7 +180,39 @@ bool Mt3d_pos_leftOrRight(struct Mt3d * const inOutObj, bool inLeft)
     return posStep(inOutObj, CALC_ANGLE_TO_POS(inOutObj->gamma+(inLeft?1.0:-1.0)*M_PI_2));
 }
 
-static inline void fillPixel(struct Mt3d const * const inObj, enum CellType const inCellType, int const inY, uint8_t * const inOutPix)
+static inline void fillPixel_floor(struct Mt3d const * const inObj, enum CellType const inCellType, double const inDx, double const inDy, int const inY, uint8_t * const inOutPix)
+{
+    double const imgX = inDx-(double)((int)inDx), // Removes integer part.
+        imgY = inDy-(double)((int)inDy); // Removes integer part.
+    int const row = (int)((double)inObj->bmpH[inCellType]*imgY),
+        col = (int)((double)inObj->bmpH[inCellType]*imgX);
+
+    unsigned char const * const channelZeroPtr = inObj->bmpPix[inCellType]+3*inObj->bmpW[inCellType]*row+3*col;
+
+    inOutPix[0] = channelZeroPtr[0];
+    inOutPix[1] = channelZeroPtr[1];
+    inOutPix[2] = channelZeroPtr[2];
+    
+    switch(inCellType)
+    {
+        case CellType_floor_default:
+            break;
+        case CellType_floor_exit:
+            if(getSecond(inObj)%2)
+            {
+                inOutPix[0] = ~inOutPix[0];
+                inOutPix[1] = ~inOutPix[1];
+                inOutPix[2] = ~inOutPix[2];
+            }
+            break;
+        
+        default:
+            assert(false);
+            break;
+    }
+}
+
+static inline void fillPixel(struct Mt3d const * const inObj, enum CellType const inCellType, double const inDx, double const inDy, int const inY, uint8_t * const inOutPix)
 {
     switch(inCellType)
     {
@@ -189,42 +221,9 @@ static inline void fillPixel(struct Mt3d const * const inObj, enum CellType cons
             inOutPix[1] = 0;
             inOutPix[0] = 0;
             break;
-        case CellType_floor_default:
-            if(inY<inObj->floorY)
-            {
-                inOutPix[2] = 0;
-                inOutPix[1] = 0;
-                inOutPix[0] = 0xFF;
-            }
-            else
-            {
-                inOutPix[2] = 0;
-                inOutPix[1] = 0xFF;
-                inOutPix[0] = 0;
-            }
-            break;
+        case CellType_floor_default: // (falls through)
         case CellType_floor_exit:
-            if(inY<inObj->floorY)
-            {
-                inOutPix[2] = 0xFF;
-                inOutPix[1] = 0xFF;
-                inOutPix[0] = 0;
-            }
-            else
-            {
-                if(getSecond(inObj)%2)
-                {
-                    inOutPix[2] = 0;
-                    inOutPix[1] = 0xFF;
-                    inOutPix[0] = 0xFF; 
-                }
-                else
-                {
-                    inOutPix[2] = 0xFF;
-                    inOutPix[1] = 0;
-                    inOutPix[0] = 0xFF; 
-                }
-            }
+            fillPixel_floor(inObj, inCellType, inDx, inDy, inY, inOutPix);
             break;
 
         default:
@@ -310,13 +309,15 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
             
             // Get coordinates of cell where the line/"ray" reaches either floor or ceiling:
             //
-            int const dCellX = (int)(deltaX+inOutObj->posX),
-                dCellY = (int)((double)(inOutObj->map->height-1)-(deltaY+kPosY)); // Cartesian Y to cell Y coordinate conversion.
+            double const dX = deltaX+inOutObj->posX,
+                dY = (double)(inOutObj->map->height-1)-(deltaY+kPosY); // Cartesian Y to cell Y coordinate conversion.
+            int const dCellX = (int)dX,
+                dCellY = (int)dY;
             
             if((cellX==dCellX)&&(cellY==dCellY)) // Line/"ray" hits floor or ceiling in current/player's cell.
             {            
                 countLen = inOutObj->e[pos];
-                fillPixel(inOutObj, (enum CellType)inOutObj->map->cells[cellY*inOutObj->map->width+cellX], y, colPix);
+                fillPixel(inOutObj, (enum CellType)inOutObj->map->cells[cellY*inOutObj->map->width+cellX], dX, dY, y, colPix);
             }
             else
             {
@@ -386,8 +387,8 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                             
                             noHit = false;
                             countLen = diffXY*inOutObj->e[pos]/inOutObj->d[pos];
-                            fillPixel(inOutObj, CellType_block_default, y, colPix);
-                            
+                            //fillPixel(inOutObj, CellType_block_default, dX, dY, y, colPix);
+                            //
                             {
                                 double const opposite = sqrt(countLen*countLen-diffXY*diffXY);
                                 double imgX = nextX?(double)(inOutObj->map->height-1)-kLastY:lastX, // (Cartesian Y to cell Y coordinate conversion, if necessary)
@@ -422,10 +423,10 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                                 assert(imgY>=0.0 && imgY<1.0);
 
                                 {
-                                    int const row = (int)((double)inOutObj->sampleBmpH*imgY),
-                                        col = (int)((double)inOutObj->sampleBmpH*imgX);
+                                    int const row = (int)((double)inOutObj->bmpH[cellType]*imgY),
+                                        col = (int)((double)inOutObj->bmpH[cellType]*imgX);
                                     
-                                    unsigned char const * const channelZeroPtr = inOutObj->sampleBmpPix+3*inOutObj->sampleBmpW*row+3*col;
+                                    unsigned char const * const channelZeroPtr = inOutObj->bmpPix[cellType]+3*inOutObj->bmpW[cellType]*row+3*col;
                                     
                                     colPix[0] = channelZeroPtr[0];
                                     colPix[1] = channelZeroPtr[1];
@@ -441,7 +442,7 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                             if(!noHit) // Line/"ray" hits floor or ceiling.
                             {
                                 countLen = inOutObj->e[pos];
-                                fillPixel(inOutObj, cellType, y, colPix);
+                                fillPixel(inOutObj, cellType, dX, dY, y, colPix);
                             }
                             //
                             // Otherwise: Line/"ray" passes through current cell to the next.
@@ -475,8 +476,10 @@ void Mt3d_delete(struct Mt3d * const inObj)
     assert(inObj->eta!=NULL);
     free((double*)inObj->eta);
     
-    assert(inObj->sampleBmpPix!=NULL);
-    free(inObj->sampleBmpPix);
+    for(int i = 0;i<CellType_COUNT;++i)
+    {
+        free(inObj->bmpPix[i]);
+    }
     
     free(inObj);
 }
@@ -529,12 +532,14 @@ struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, double const in
         .map = NULL,
         .pixels = NULL,
             
-        .sampleBmpPix = NULL,
-        .sampleBmpW = -1,
-        .sampleBmpH = -1,
+//        .bmpPix
+//        .bmpW
+//        .bmpH
     };
 
-    buf.sampleBmpPix = Bmp_read("gradient-redblue-120x120.bmp", &buf.sampleBmpW, &buf.sampleBmpH);
+    buf.bmpPix[CellType_floor_default] = Bmp_read("gradient-redblue-120x120.bmp", &buf.bmpW[CellType_floor_default], &buf.bmpH[CellType_floor_default]);
+    buf.bmpPix[CellType_block_default] = Bmp_read("gradient-redblue-120x120.bmp", &buf.bmpW[CellType_block_default], &buf.bmpH[CellType_block_default]);
+    buf.bmpPix[CellType_floor_exit] = Bmp_read("gradient-redblue-120x120.bmp", &buf.bmpW[CellType_floor_exit], &buf.bmpH[CellType_floor_exit]);
     
     memcpy(retVal, &buf, sizeof *retVal);
 
