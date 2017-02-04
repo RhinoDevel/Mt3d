@@ -17,121 +17,126 @@ static const double PLAYER_STEP_LEN = 0.2; // Cell lengths.
 static double const PLAYER_ANG_STEP = CALC_TO_RAD(5.0);
 
 /** Return current second of game time.
- *
  */
 static uint64_t getSecond(struct Mt3d const * const inObj)
 {
     return (inObj->updateCount*(uint64_t)inObj->msPerUpdate)/1000;
 }
 
-static int getFloorYandFill(
+static void fill(
     int const inWidth,
     int const inHeight,
     double const inAlpha,
     double const inBeta,
+    double const inTheta, // CCW angle in radian describing z-axis rotation.
     double const inH,
     double * const inOutD,
     double * const inOutE,
-    double * const inOutEta)
+    double * const inOutEta,
+    bool * const inOutHitsFloor) // e hits ceiling, if false.
 {
-    int retVal = -1,
-        x = 0,
-        y = 0;
-    
     assert(inAlpha>0.0 && inAlpha<M_PI);
     assert(inBeta>0.0 && inBeta<M_PI);
+    assert(inTheta>=0.0 && inTheta<Calc_PiMul2);
     assert(inHeight%2==0);
     assert(inWidth%2==0);
-    
-    double * const betaTopX = malloc(inWidth*sizeof *betaTopX), // To hold betaX/2.
-        * const aX = malloc(inWidth*sizeof *aX); // Lengths in pixel between point of view and pixel plane for each x.
-   
-    assert(betaTopX!=NULL);
-    assert(aX!=NULL);
-    
-    double const yMiddle = (double)(inHeight-1)/2.0,
-        xMiddle = (double)(inWidth-1)/2.0,
-        sYmiddle = xMiddle/sin(inAlpha/2.0),
-        sXmiddle = yMiddle/sin(inBeta/2.0),
-        sYmiddleSqr = sYmiddle*sYmiddle,
-        sXmiddleSqr = sXmiddle*sXmiddle,
-        floorToEye = inH*CEILING_HEIGHT, // (cell lengths)
-        ceilingToEye = CEILING_HEIGHT-floorToEye; // (cell lengths)
-    
-    for(x = 0;x<inWidth;++x)
-    {
-        double const diff = xMiddle-(double)x,
-            sX = sqrt(diff*diff+sXmiddleSqr);
 
-        betaTopX[x] = asin(yMiddle/sX);
-        assert(betaTopX[x]>0.0 && betaTopX[x]<M_PI_2);
-        aX[x] = yMiddle/tan(betaTopX[x]);
-    }
-    
+    int x = 0,
+        y = 0;
+
+    double const dHeight = (double)inHeight,
+        xMiddle = (double)(inWidth-1)/2.0,
+        yMiddle = (dHeight-1.0)/2.0,
+        floorToEye = inH*CEILING_HEIGHT, // (cell lengths)
+        ceilingToEye = CEILING_HEIGHT-floorToEye, // (cell lengths)
+        sXmiddle = yMiddle/sin(inBeta/2.0),
+        sYmiddle = xMiddle/sin(inAlpha/2.0),
+        sXmiddleSqr = sXmiddle*sXmiddle,
+        sYmiddleSqr = sYmiddle*sYmiddle;
+
     for(y = 0;y<inHeight;++y)
     {
-        double const dY = (double)y,
-            diff = yMiddle-dY,
-            sY = sqrt(diff*diff+sYmiddleSqr),
-            alphaLeftY = asin(xMiddle/sY); // To hold alphaX/2.
-        double delta = 0.0;
+        int const rowPos = y*inWidth;
+        double const cY = CALC_CARTESIAN_Y((double)y, dHeight);
 
         for(x = 0;x<inWidth;++x)
         {
-            int const pos = y*inWidth+x;
-            double epsilon = -1.0; // Epsilon is the angle from pixel 0 = 0 degree to pixel inWidth-1 = inAlpha degree.
-            
-            if(dY<yMiddle)
+            int const pos = rowPos+x;
+            double xRot = -1.0,
+                yRot = -1.0,
+                betaTopX = 0.0,
+                aX = 0.0;
+
+            { // Calculate rotated x and y coordinates in pixel/bitmap coordinates (Y starts at top-left):
+                double cYrot = -1.0;
+
+                Calc_fillRotated(x-xMiddle, cY-yMiddle, inTheta, &xRot, &cYrot);
+
+                xRot = xRot+xMiddle;
+                
+                cYrot = cYrot+yMiddle;
+                yRot = CALC_CARTESIAN_Y(cYrot, dHeight);
+            }
+
             {
-                delta = betaTopX[x]-atan((yMiddle-dY)/aX[x]);
-                assert(delta<betaTopX[x]);
-                
-                double const angle = betaTopX[x]-delta;
+                double const diff = xMiddle-xRot,
+                    sX = sqrt(diff*diff+sXmiddleSqr);
+
+                betaTopX = asin(yMiddle/sX);
+                assert(betaTopX>0.0 && betaTopX<M_PI_2);
+                aX = yMiddle/tan(betaTopX);
+            }
+
+            if(yRot<yMiddle)
+            {
+                inOutHitsFloor[pos] = false; // Hits ceiling.
+
+                double const delta = betaTopX-atan((yMiddle-yRot)/aX);
+                assert(delta<betaTopX);
+
+                double const angle = betaTopX-delta;
                 assert(angle<M_PI_2);
-                
+
                 inOutE[pos] = ceilingToEye/sin(angle);
                 inOutD[pos] = inOutE[pos]*cos(angle);
             }
             else
             {
-                assert(dY>yMiddle);
-                delta = betaTopX[x]+atan((dY-yMiddle)/aX[x]);
-                assert(delta>betaTopX[x]);
-                
-                double const angle = delta-betaTopX[x];
+                assert(yRot>yMiddle); // (not equal)
+
+                inOutHitsFloor[pos] = true;
+
+                double const delta = betaTopX+atan((yRot-yMiddle)/aX);
+                assert(delta>betaTopX);
+
+                double const angle = delta-betaTopX;
                 assert(angle<M_PI_2);
-                
+
                 inOutE[pos] = floorToEye/sin(angle);
                 inOutD[pos] = inOutE[pos]*cos(angle);
-
-                if(retVal==-1)
-                {
-                    retVal = y;
-                }
             }
-            
-            double const dX = (double)x;
 
-            if(dX<xMiddle)
             {
-                epsilon = alphaLeftY-atan((xMiddle-dX)/aX[x]);
-            }
-            else
-            {   
-                assert(dX!=xMiddle);
-                epsilon = alphaLeftY+atan((dX-xMiddle)/aX[x]);
-            }
+                double const diff = yMiddle-yRot,
+                    sY = sqrt(diff*diff+sYmiddleSqr),
+                    alphaLeftY = asin(xMiddle/sY); // To hold alphaX/2.
+                double epsilon = 0.0;
 
-            inOutEta[pos] = alphaLeftY-epsilon; // Eta is a pre-calculated angle to be used with player view angle, later.
-            //inOutEta[pos] = CALC_ANGLE_TO_POS(inOutEta[pos]); // Not necessary, here.
+                if(xRot<xMiddle)
+                {
+                    epsilon = alphaLeftY-atan((xMiddle-xRot)/aX);
+                }
+                else
+                {
+                    assert(xRot!=xMiddle);
+                    epsilon = alphaLeftY+atan((xRot-xMiddle)/aX);
+                }
 
-            //Deb_line("y = %d, x = %d: betaTopX = %f degree, delta = %f degree, e = %f cell length, d = %f cell length, epsilon = %f degree, eta = %f degree.", y, x, CALC_TO_DEG(betaTopX[x]), CALC_TO_DEG(delta), inOutE[pos], inOutD[pos], CALC_TO_DEG(epsilon), CALC_TO_DEG(inOutEta[x]))
+                inOutEta[pos] = alphaLeftY-epsilon; // Eta is a pre-calculated angle to be used with player view angle, later.
+                //inOutEta[pos] = CALC_ANGLE_TO_POS(inOutEta[pos]); // Not necessary, here.
+            }
         }
     }
-
-    free(betaTopX);
-    free(aX);
-    return retVal;
 }
 
 static bool posStep(struct Mt3d * const inOutObj, double const inIota) // Iota: Complete angle in wanted direction (0 rad <= a < 2*PI rad).
@@ -140,18 +145,18 @@ static bool posStep(struct Mt3d * const inOutObj, double const inIota) // Iota: 
         subY = 0.0, // Cell length to subtract from Y position.
         x = inOutObj->posX,
         y = inOutObj->posY;
-    
+
     Calc_fillDeltas(inIota, PLAYER_STEP_LEN, &addX, &subY); // MT_TODO: TEST: Assertion "assert(inAngle>=0.0 && inAngle<Calc_PiMul2);" from Calc_fillDeltas() implementation can fail, here (very rare)!
-    
+
     x += addX;
     y -= subY; // Subtraction, because cell coordinate system starts on top, Cartesian coordinate system at bottom.
-    
+
     if((enum CellType)inOutObj->map->cells[(int)y*inOutObj->map->width+(int)x]==CellType_block_default) // MT_TODO: TEST: Player has no width!
     {
         return false;
     }
     inOutObj->posX = x;
-    inOutObj->posY = y; 
+    inOutObj->posY = y;
     return true;
 }
 
@@ -166,7 +171,7 @@ bool Mt3d_ang_leftOrRight(struct Mt3d * const inOutObj, bool inLeft)
         inOutObj->gamma -= PLAYER_ANG_STEP;
     }
     inOutObj->gamma = CALC_ANGLE_TO_POS(inOutObj->gamma);
-    
+
     return true;
 }
 
@@ -192,7 +197,7 @@ static inline void fillPixel_floor(struct Mt3d const * const inObj, enum CellTyp
     inOutPix[0] = channelZeroPtr[0];
     inOutPix[1] = channelZeroPtr[1];
     inOutPix[2] = channelZeroPtr[2];
-    
+
     switch(inCellType)
     {
         case CellType_floor_default:
@@ -205,7 +210,7 @@ static inline void fillPixel_floor(struct Mt3d const * const inObj, enum CellTyp
                 inOutPix[2] = ~inOutPix[2];
             }
             break;
-        
+
         default:
             assert(false);
             break;
@@ -229,7 +234,7 @@ static inline void fillPixel(struct Mt3d const * const inObj, enum CellType cons
         default:
             assert(false);
             break;
-    }   
+    }
 }
 
 /** Set brightness based on map constants and line length from player.
@@ -272,50 +277,62 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
     //
     // => yCartesian = heightCell-1-yCell
     // => yCell      = heightCell-1-yCartesian
-    
-    if(inOutObj->floorY==-1) // <=> Invalid.
+
+    if(inOutObj->doFill) // <=> Invalid.
     {
-        inOutObj->floorY = getFloorYandFill(inOutObj->width, inOutObj->height, inOutObj->alpha, inOutObj->beta, inOutObj->h, inOutObj->d, inOutObj->e, inOutObj->eta); // Late calculation to avoid unnecessary performance bottlenecks.
+        inOutObj->doFill = false;
+        fill(
+            inOutObj->width,
+            inOutObj->height,
+            inOutObj->alpha,
+            inOutObj->beta,
+            inOutObj->theta,
+            inOutObj->h,
+            inOutObj->d,
+            inOutObj->e,
+            inOutObj->eta,
+            inOutObj->hitsFloor);
     }
-    
-    double const kPosY = (double)(inOutObj->map->height-1)-inOutObj->posY;
-    
+
+    double const kPosY = (double)(inOutObj->map->height-1)-inOutObj->posY,
+        hCellLengths = CEILING_HEIGHT*inOutObj->h; // Gets height of player's eye in cell lengths.
+
     for(int y = 0;y<inOutObj->height;++y)
     {
         int const truncPosX = (int)inOutObj->posX,
             truncPosY = (int)inOutObj->posY,
             rowByWidth = y*inOutObj->width;
         uint32_t * const rowPix = (uint32_t*)inOutObj->pixels+rowByWidth;
-        
+
         for(int x = 0;x<inOutObj->width;++x)
-        {   
+        {
             double deltaX = 0.0,
                 deltaY = 0.0,
                 countLen = -1.0; // Means unset.
             int cellX = truncPosX,
                 cellY = truncPosY;
-            
+
             int const pos = rowByWidth+x;
-            
+
             {
                 double const zetaUnchecked = inOutObj->eta[pos]+inOutObj->gamma; // (might be out of expected range, see usage below)
 
                 Calc_fillDeltas(CALC_ANGLE_TO_POS(zetaUnchecked), inOutObj->d[pos], &deltaX, &deltaY); // MT_TODO: TEST: Seems to be a performance bottleneck!
             }
-            
-            assert(deltaX!=0.0); // MT_TODO: TEST: Implement special case! 
-            
+
+            assert(deltaX!=0.0); // MT_TODO: TEST: Implement special case!
+
             uint8_t * const colPix = (uint8_t*)(rowPix+x);
-            
+
             // Get coordinates of cell where the line/"ray" reaches either floor or ceiling:
             //
             double const dX = deltaX+inOutObj->posX,
                 dY = (double)(inOutObj->map->height-1)-(deltaY+kPosY); // Cartesian Y to cell Y coordinate conversion.
             int const dCellX = (int)dX,
                 dCellY = (int)dY;
-            
+
             if((cellX==dCellX)&&(cellY==dCellY)) // Line/"ray" hits floor or ceiling in current/player's cell.
-            {            
+            {
                 countLen = inOutObj->e[pos];
                 fillPixel(inOutObj, (enum CellType)inOutObj->map->cells[cellY*inOutObj->map->width+cellX], dX, dY, y, colPix);
             }
@@ -323,39 +340,51 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
             {
                 int const addX = CALC_SIGN_FROM_DOUBLE(deltaX),
                     addY = CALC_SIGN_FROM_DOUBLE(deltaY);
-                
+
                 bool noHit = true;
                 int xForHit = cellX+(int)(addX>0),
                     yForHit = (int)kPosY+(int)(addY>0); // (Cartesian Y coordinate)
-                
+
                 // Store last reached coordinates for brightness (and more) calculations:
                 //
                 double lastX = inOutObj->posX,
                     kLastY = kPosY; // (Cartesian Y coordinate)
-                
+
                 // Values to represent line in Slope-intercept form:
                 //
                 double const m = deltaY/deltaX, // Slope
                     b = kPosY-m*inOutObj->posX; // Y-intercept
-                
+
                 do
-                {   
+                {
                     double const dblYForHit = (double)yForHit,
                         dblXForHit = (double)xForHit,
                         hitX = (dblYForHit-b)/m,
                         hitY = m*dblXForHit+b;
                     bool const nextY = ( addX==1 && (int)hitX<xForHit ) || ( addX!=1 && hitX>=dblXForHit ),
                         nextX = ( addY==1 && (int)hitY<yForHit ) || ( addY!=1 && hitY>=dblYForHit );
-                    
-                    assert(nextY||nextX);
 
+                    assert(nextY||nextX);
+                    
+                    // Debug code to ignore error and try to show frame:
+                    //
+//                    if(!(nextY||nextX))
+//                    {
+//                        colPix[0] = 255;
+//                        colPix[1] = 255;
+//                        colPix[2] = 255;
+//                        
+//                        countLen = 1.0;
+//                        break;  
+//                    }
+                        
                     if(nextY)
                     {
                         // Update last reached coordinates:
                         //
                         lastX = hitX;
                         kLastY = dblYForHit;
-                        
+
                         cellY -= addY;
                         yForHit += addY;
                     }
@@ -365,18 +394,18 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                         //
                         lastX = dblXForHit;
                         kLastY = hitY;
-                        
+
                         cellX += addX;
                         xForHit += addX;
                     }
-                    
+
                     assert(cellX>=0 && cellX<inOutObj->map->width);
                     assert(cellY>=0 && cellY<inOutObj->map->height);
-                    
+
                     enum CellType const cellType = (enum CellType)inOutObj->map->cells[cellY*inOutObj->map->width+cellX];
-                    
+
                     noHit = cellX!=dCellX || cellY!=dCellY; // noHit = false => Last cell is reached, where line/"ray" (at least theoretically) hits either floor or ceiling.
-                    
+
                     switch(cellType)
                     {
                         case CellType_block_default: // Line/"ray" hits block's surface.
@@ -384,7 +413,7 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                             double const diffY = kLastY-kPosY,
                                 diffX = lastX-inOutObj->posX,
                                 diffXY = sqrt(diffY*diffY+diffX*diffX);
-                            
+
                             noHit = false;
                             countLen = diffXY*inOutObj->e[pos]/inOutObj->d[pos];
                             //fillPixel(inOutObj, CellType_block_default, dX, dY, y, colPix);
@@ -411,23 +440,24 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                                 }
                                 assert(imgX>=0.0 && imgX<1.0);
 
-                                if(y<inOutObj->floorY)
+                                if(inOutObj->hitsFloor[pos])
                                 {
-                                    imgY += CEILING_HEIGHT*inOutObj->h;
+                                    imgY = hCellLengths-imgY;
                                 }
                                 else
                                 {
-                                    imgY = CEILING_HEIGHT*inOutObj->h-imgY;
+                                    imgY += hCellLengths;
                                 }
+
                                 imgY = CEILING_HEIGHT-imgY;
                                 assert(imgY>=0.0 && imgY<1.0);
 
                                 {
                                     int const row = (int)((double)inOutObj->bmpH[cellType]*imgY),
                                         col = (int)((double)inOutObj->bmpH[cellType]*imgX);
-                                    
+
                                     unsigned char const * const channelZeroPtr = inOutObj->bmpPix[cellType]+3*inOutObj->bmpW[cellType]*row+3*col;
-                                    
+
                                     colPix[0] = channelZeroPtr[0];
                                     colPix[1] = channelZeroPtr[1];
                                     colPix[2] = channelZeroPtr[2];
@@ -446,7 +476,7 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                             }
                             //
                             // Otherwise: Line/"ray" passes through current cell to the next.
-                            
+
                             break;
 
                         default:
@@ -463,87 +493,92 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
 void Mt3d_delete(struct Mt3d * const inObj)
 {
     assert(inObj!=NULL);
-    
+
     assert(inObj->map==NULL); // No ownership of map.
     assert(inObj->pixels==NULL); // No ownership of pixels.
-    
+
     assert(inObj->d!=NULL);
     free((double*)inObj->d);
-    
+
     assert(inObj->e!=NULL);
     free((double*)inObj->e);
-    
+
     assert(inObj->eta!=NULL);
     free((double*)inObj->eta);
-    
+
     for(int i = 0;i<CellType_COUNT;++i)
     {
         free(inObj->bmpPix[i]);
     }
-    
+
     free(inObj);
 }
 
-void Mt3d_setValues(double const inAlpha, double const inBeta, double const inH, struct Mt3d * const inOutObj)
+void Mt3d_setValues(double const inAlpha, double const inBeta, double const inTheta, double const inH, struct Mt3d * const inOutObj)
 {
-    inOutObj->floorY = -1; // Invalidates to trigger late getFloorYandFill() call by Mt3d_draw(), when needed.
+    inOutObj->doFill = true; // Triggers late fill() call by Mt3d_draw(), when needed.
     inOutObj->alpha = inAlpha;
     inOutObj->beta = inBeta;
+    inOutObj->theta = inTheta;
     inOutObj->h = inH;
-    
+
     //Deb_line("Alpha = %f degree, beta = %f degree, h(-eight) = %f cell length.", CALC_TO_DEG(inAlpha), CALC_TO_DEG(inBeta), inH)
 }
 
-struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, double const inAlpha, double const inBeta, double const inH, int const inMsPerUpdate)
+struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, double const inAlpha, double const inBeta, double const inTheta, double const inH, int const inMsPerUpdate)
 {
     struct Mt3d * const retVal = malloc(sizeof *retVal);
     assert(retVal!=NULL);
-    
+
     size_t const pixelCount = inHeight*inWidth;
-    
+
     double * const d = malloc(pixelCount*sizeof *d);
     assert(d!=NULL);
     double * const e = malloc(pixelCount*sizeof *e);
     assert(e!=NULL);
-    
+    bool * const hitsFloor = malloc(pixelCount*sizeof *hitsFloor);
+    assert(hitsFloor!=NULL);
+
     double * const eta = malloc(pixelCount*sizeof *eta);
     assert(eta!=NULL);
-    
+
     struct Mt3d /*const*/ buf = (struct Mt3d)
     {
         .msPerUpdate = inMsPerUpdate,
         .updateCount = 0,
-        
+
         .width = inWidth,
         .height = inHeight,
         .alpha = 0.0, // Invalidates
         .beta = 0.0, // Invalidates
+        .theta = 0.0,
         .h = -1.0, // Invalidates
-            
+
         .d = d,
         .e = e,
-        .floorY = -1, // Invalidates
-            
+        .doFill = false,
+        .hitsFloor = hitsFloor,
+
         .eta = eta,
-            
+
         .posX = 0.0,
         .posY = 0.0,
         .gamma = 0.0,
         .map = NULL,
         .pixels = NULL,
-            
+
 //        .bmpPix
 //        .bmpW
 //        .bmpH
     };
 
-    buf.bmpPix[CellType_floor_default] = Bmp_read("gradient-redblue-120x120.bmp", &buf.bmpW[CellType_floor_default], &buf.bmpH[CellType_floor_default]);
-    buf.bmpPix[CellType_block_default] = Bmp_read("gradient-redblue-120x120.bmp", &buf.bmpW[CellType_block_default], &buf.bmpH[CellType_block_default]);
+    buf.bmpPix[CellType_floor_default] = Bmp_read("wood-320x320.bmp", &buf.bmpW[CellType_floor_default], &buf.bmpH[CellType_floor_default]);
+    buf.bmpPix[CellType_block_default] = Bmp_read("brick-320x320.bmp", &buf.bmpW[CellType_block_default], &buf.bmpH[CellType_block_default]);
     buf.bmpPix[CellType_floor_exit] = Bmp_read("gradient-redblue-120x120.bmp", &buf.bmpW[CellType_floor_exit], &buf.bmpH[CellType_floor_exit]);
-    
+
     memcpy(retVal, &buf, sizeof *retVal);
 
-    Mt3d_setValues(inAlpha, inBeta, inH, retVal);
-    
+    Mt3d_setValues(inAlpha, inBeta, inTheta, inH, retVal);
+
     return retVal;
 }

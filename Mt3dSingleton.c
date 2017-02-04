@@ -9,12 +9,13 @@
 #include "Mt3dInput.h"
 #include "MapSample.h"
 #include "Mt3dSingleton.h"
+#include "Deb.h"
 
-static double const ALPHA = CALC_TO_RAD(45.0);
+static double const ALPHA = CALC_TO_RAD(60.0);
 static double const ALPHA_MIN = CALC_TO_RAD(20.0);
 static double const ALPHA_MAX = CALC_TO_RAD(160.0);
 static double const ALPHA_STEP = CALC_TO_RAD(5.0);
-static double const H = 0.3; // As part of room height (e.g. 0.5 = 50% of room height).
+static double const H = 0.4; // As part of room height (e.g. 0.5 = 50% of room height).
 static double const H_MIN = 0.1;
 static double const H_MAX = 0.9;
 static double const H_STEP = 0.1;
@@ -30,84 +31,96 @@ static double getBeta(double const inAlpha)
 {
     assert(width>0);
     assert(height>0);
-    
+
     return 2.0*atan((double)height*tan(inAlpha/2.0)/(double)width);
 }
 
 static bool pos_up()
 {
     assert(o!=NULL);
-    
+
     double h = 0.0;
-    
+
     if(o->h==H_MAX)
     {
         return false;
     }
-    
+
     h = o->h+H_STEP;
     if(h>H_MAX)
     {
         h = H_MAX;
     }
-    Mt3d_setValues(o->alpha, o->beta, h, o);
+    Mt3d_setValues(o->alpha, o->beta, 0.0, h, o);
     return true;
+    
+    // Debug code to test Z-axis rotation:
+    //
+//    static double angle = 0.0;
+//    angle += CALC_TO_RAD(5);
+//    if(angle>=CALC_TO_RAD(360))
+//    {
+//        angle = 0.0;
+//    }
+//    Deb_line("ANGLE: %f", angle)
+//    Mt3d_setValues(o->alpha, o->beta, angle, o->h, o);
+//    return true;
 }
 static bool pos_down()
 {
     assert(o!=NULL);
-    
+
     double h = 0.0;
-    
+
     if(o->h==H_MIN)
     {
         return false;
     }
-    
+
     h = o->h-H_STEP;
     if(h<H_MIN)
     {
         h = H_MIN;
     }
-    Mt3d_setValues(o->alpha, o->beta, h, o);
+    Mt3d_setValues(o->alpha, o->beta, 0.0, h, o);
     return true;
 }
 static bool fov_wider()
 {
     double alpha = 0.0;
-    
+
     assert(o!=NULL);
-    
+
     if(o->alpha==ALPHA_MAX)
     {
         return false;
     }
-    
-    alpha = o->alpha+ALPHA_STEP;      
+
+    alpha = o->alpha+ALPHA_STEP;
     if(alpha>ALPHA_MAX)
     {
         alpha = ALPHA_MAX;
     }
-    Mt3d_setValues(alpha, getBeta(alpha), o->h, o);
+    Mt3d_setValues(alpha, getBeta(alpha), 0.0, o->h, o);
     return true;
 }
 static bool fov_narrower()
 {
     double alpha = 0.0;
-    
+
     assert(o!=NULL);
-    
+
     if(o->alpha==ALPHA_MIN)
     {
         return false;
     }
-    
-    alpha = o->alpha-ALPHA_STEP;      
+
+    alpha = o->alpha-ALPHA_STEP;
     if(alpha<ALPHA_MIN)
     {
         alpha = ALPHA_MIN;
     }
-    Mt3d_setValues(alpha, getBeta(alpha), o->h, o);
+    Mt3d_setValues(alpha, getBeta(alpha), 0.0, o->h, o);
     return true;
 }
 
@@ -117,33 +130,33 @@ static void applyInput()
     assert(o!=NULL);
     assert(toggleFullscreen!=NULL);
     assert(quit!=NULL);
-    
+
     if(input->quit)
     {
         quit();
         return;
     }
-    
+
     if(input->toggleFullscreen)
     {
         toggleFullscreen();
     }
-    
+
     if(input->pos_left!=input->pos_right)
     {
         Mt3d_pos_leftOrRight(o, input->pos_left); // (return value ignored)
     }
-    
+
     if(input->pos_forward!=input->pos_backward)
     {
         Mt3d_pos_forwardOrBackward(o,  input->pos_forward); // (return value ignored)
     }
-   
+
     if(input->ang_left!=input->ang_right)
     {
         Mt3d_ang_leftOrRight(o, input->ang_left); // (return value ignored)
     }
-    
+
     if(input->pos_up!=input->pos_down)
     {
         if(input->pos_up)
@@ -155,7 +168,7 @@ static void applyInput()
             pos_down(); // (return value ignored)
         }
     }
-    
+
     if(input->fov_wider!=input->fov_narrower)
     {
         if(input->fov_wider)
@@ -191,7 +204,7 @@ void Mt3dSingleton_input_onKeyPress(char const inChar)
     Mt3dInput_setFlagByChar(inChar, true, input); // (return value ignored)
 }
 void Mt3dSingleton_input_onKeyRelease(char const inChar)
-{    
+{
     Mt3dInput_setFlagByChar(inChar, false, input); // (return value ignored)
 }
 
@@ -216,18 +229,18 @@ void Mt3dSingleton_init(int const inWidth, int const inHeight, int const inMsPer
     assert(input==NULL);
     assert(toggleFullscreen==NULL);
     assert(quit==NULL);
-    
+
     assert(inWidth>0);
     assert(inHeight>0);
-    
+
     input = Mt3dInput_create();
     toggleFullscreen = inToggleFullscreen;
     quit = inQuit;
-    
+
     width = inWidth;
     height = inHeight;
-    o = Mt3d_create(inWidth, height, ALPHA, getBeta(ALPHA), H, inMsPerUpdate);
-    
+    o = Mt3d_create(inWidth, height, ALPHA, getBeta(ALPHA), 0.0, H, inMsPerUpdate);
+
     o->map = MapSample_create();
     assert(sizeof *o->pixels==1);
     o->pixels = malloc(width*height*4*sizeof *o->pixels);
@@ -250,7 +263,7 @@ void Mt3dSingleton_init(int const inWidth, int const inHeight, int const inMsPer
 //            //colPix[3] = 0xFF; // (unused)
 //        }
 //    }
-    
+
     Mt3dSingleton_draw();
 }
 void Mt3dSingleton_deinit()
@@ -263,7 +276,7 @@ void Mt3dSingleton_deinit()
     assert(input!=NULL);
     assert(toggleFullscreen!=NULL);
     assert(quit!=NULL);
-    
+
     Map_delete(o->map);
     o->map = NULL;
     free(o->pixels);
