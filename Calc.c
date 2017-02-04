@@ -34,6 +34,15 @@ void Calc_fillDeltas(double const inAngle, double const inHypotenuse, double * c
     *inOutDeltaY = yFactor[zeroSector]*(zeroTwo*opposite+oneThree*adjacent);
 }
 
+void Calc_fillRotated(double const inV, double const inW, double const inAngle, double * const inOutX, double * const inOutY)
+{
+    double const s = sin(inAngle),
+        c = cos(inAngle);
+
+    *inOutX = inV*c-inW*s;
+    *inOutY = inV*s+inW*c;
+}
+
 uint16_t* Calc_createFirstQuadrantSinLut(size_t const inLen)
 {
     /*static*/ double const sineScaling = (double)(maxScaledSine+1); // Corresponds to 1.0.
