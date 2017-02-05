@@ -15,6 +15,7 @@ static double const ALPHA = CALC_TO_RAD(60.0);
 static double const ALPHA_MIN = CALC_TO_RAD(20.0);
 static double const ALPHA_MAX = CALC_TO_RAD(160.0);
 static double const ALPHA_STEP = CALC_TO_RAD(5.0);
+static double const THETA_STEP = CALC_TO_RAD(5.0);
 static double const H = 0.4; // As part of room height (e.g. 0.5 = 50% of room height).
 static double const H_MIN = 0.1;
 static double const H_MAX = 0.9;
@@ -51,20 +52,8 @@ static bool pos_up()
     {
         h = H_MAX;
     }
-    Mt3d_setValues(o->alpha, o->beta, 0.0, h, o);
+    Mt3d_setValues(o->alpha, o->beta, o->theta, h, o);
     return true;
-    
-    // Debug code to test Z-axis rotation:
-    //
-//    static double angle = 0.0;
-//    angle += CALC_TO_RAD(5);
-//    if(angle>=CALC_TO_RAD(360))
-//    {
-//        angle = 0.0;
-//    }
-//    Deb_line("ANGLE: %f", angle)
-//    Mt3d_setValues(o->alpha, o->beta, angle, o->h, o);
-//    return true;
 }
 static bool pos_down()
 {
@@ -82,7 +71,7 @@ static bool pos_down()
     {
         h = H_MIN;
     }
-    Mt3d_setValues(o->alpha, o->beta, 0.0, h, o);
+    Mt3d_setValues(o->alpha, o->beta, o->theta, h, o);
     return true;
 }
 static bool fov_wider()
@@ -101,7 +90,7 @@ static bool fov_wider()
     {
         alpha = ALPHA_MAX;
     }
-    Mt3d_setValues(alpha, getBeta(alpha), 0.0, o->h, o);
+    Mt3d_setValues(alpha, getBeta(alpha), o->theta, o->h, o);
     return true;
 }
 static bool fov_narrower()
@@ -120,7 +109,35 @@ static bool fov_narrower()
     {
         alpha = ALPHA_MIN;
     }
-    Mt3d_setValues(alpha, getBeta(alpha), 0.0, o->h, o);
+    Mt3d_setValues(alpha, getBeta(alpha), o->theta, o->h, o);
+    return true;
+}
+static bool rot_z_ccw()
+{
+    assert(o!=NULL);
+
+    double theta = o->theta;
+
+    theta += THETA_STEP;
+    if(theta>=Calc_PiMul2)
+    {
+        theta = 0.0;
+    }
+    Mt3d_setValues(o->alpha, o->beta, theta, o->h, o);
+    return true;
+}
+static bool rot_z_cw()
+{
+    assert(o!=NULL);
+
+    double theta = o->theta;
+
+    theta -= THETA_STEP;
+    if(theta<0.0)
+    {
+        theta = Calc_PiMul2-THETA_STEP;
+    }
+    Mt3d_setValues(o->alpha, o->beta, theta, o->h, o);
     return true;
 }
 
@@ -178,6 +195,18 @@ static void applyInput()
         else
         {
             fov_narrower(); // (return value ignored)
+        }
+    }
+
+    if(input->rot_z_ccw!=input->rot_z_cw)
+    {
+        if(input->rot_z_ccw)
+        {
+            rot_z_ccw(); // (return value ignored)
+        }
+        else
+        {
+            rot_z_cw(); // (return value ignored)
         }
     }
 }
