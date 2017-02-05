@@ -312,33 +312,54 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
 
         for(int x = 0;x<inOutObj->width;++x)
         {
-            double deltaX = 0.0,
-                deltaY = 0.0,
-                countLen = -1.0; // Means unset.
+            double deltaX = -1.0,
+                deltaY = -1.0,
+                countLen = -1.0, // Means unset.
+                dX = -1.0,
+                dY = -1.0,
+                zeta = -1.0;
             int cellX = truncPosX,
-                cellY = truncPosY;
+                cellY = truncPosY,
+                dCellX = -1,
+                dCellY = -1;
 
             int const pos = rowByWidth+x;
+            bool const hitsFloorOrCeil = inOutObj->hitType[pos]!=HitType_none;
+
+            // If hitsFloorOrCeil is NOT true, given object's d and e properties are invalid!
 
             {
                 double const zetaUnchecked = inOutObj->eta[pos]+inOutObj->gamma; // (might be out of expected range, see usage below)
 
-                Calc_fillDeltas(CALC_ANGLE_TO_POS(zetaUnchecked), inOutObj->d[pos], &deltaX, &deltaY); // MT_TODO: TEST: Seems to be a performance bottleneck!
+                zeta = CALC_ANGLE_TO_POS(zetaUnchecked);
             }
 
-            assert(deltaX!=0.0); // MT_TODO: TEST: Implement special case!
+            if(hitsFloorOrCeil)
+            {
+                Calc_fillDeltas(zeta, inOutObj->d[pos], &deltaX, &deltaY); // MT_TODO: TEST: Seems to be a performance bottleneck!
+
+                // Get coordinates of cell where the line/"ray" reaches either floor or ceiling:
+                //
+                dX = deltaX+inOutObj->posX;
+                dY = (double)(inOutObj->map->height-1)-(deltaY+kPosY); // Cartesian Y to cell Y coordinate conversion.
+                dCellX = (int)dX;
+                dCellY = (int)dY;
+            }
+            else
+            {
+                Calc_fillDeltas(zeta, 1.0, &deltaX, &deltaY); // MT_TODO: TEST: Seems to be a performance bottleneck!
+
+                // dX, dY, dCellX and dCellY are invalid!
+            }
+
+            assert(deltaX!=0.0); // Implement special case!
 
             uint8_t * const colPix = (uint8_t*)(rowPix+x);
 
-            // Get coordinates of cell where the line/"ray" reaches either floor or ceiling:
-            //
-            double const dX = deltaX+inOutObj->posX,
-                dY = (double)(inOutObj->map->height-1)-(deltaY+kPosY); // Cartesian Y to cell Y coordinate conversion.
-            int const dCellX = (int)dX,
-                dCellY = (int)dY;
-
             if((cellX==dCellX)&&(cellY==dCellY)) // Line/"ray" hits floor or ceiling in current/player's cell.
             {
+                assert(hitsFloorOrCeil);
+
                 countLen = inOutObj->e[pos];
                 fillPixel(inOutObj, (enum CellType)inOutObj->map->cells[cellY*inOutObj->map->width+cellX], dX, dY, y, colPix);
             }
@@ -412,6 +433,8 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
 
                     noHit = cellX!=dCellX || cellY!=dCellY; // noHit = false => Last cell is reached, where line/"ray" (at least theoretically) hits either floor or ceiling.
 
+                    assert(noHit || hitsFloorOrCeil);
+
                     switch(cellType)
                     {
                         case CellType_block_default: // Line/"ray" hits block's surface.
@@ -421,11 +444,19 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                                 diffXY = sqrt(diffY*diffY+diffX*diffX);
 
                             noHit = false;
-                            countLen = diffXY*inOutObj->e[pos]/inOutObj->d[pos];
-                            //fillPixel(inOutObj, CellType_block_default, dX, dY, y, colPix);
-                            //
+                            if(hitsFloorOrCeil)
                             {
-                                double const opposite = sqrt(countLen*countLen-diffXY*diffXY);
+                                // MT_TODO: TEST: Isn't d equal to diffXY?
+
+                                countLen = diffXY*inOutObj->e[pos]/inOutObj->d[pos];
+                            }
+                            else
+                            {
+                                countLen = diffXY;
+                            }
+
+                            {
+                                double const opposite = countLen-diffXY>0?sqrt(countLen*countLen-diffXY*diffXY):0; // Assuming less than 0 occurring for very small values only caused by rounding errors, where countLen and diffXY should be equal. See: http://stackoverflow.com/questions/4453372/sqrt1-0-pow1-0-2-returns-nan
                                 double imgX = nextX?(double)(inOutObj->map->height-1)-kLastY:lastX, // (Cartesian Y to cell Y coordinate conversion, if necessary)
                                     imgY = opposite;
 
@@ -448,21 +479,38 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
 
                                 switch(inOutObj->hitType[pos])
                                 {
-                                    case HitType_none: // (falls through)
+                                    case HitType_none:
+                                        assert(!hitsFloorOrCeil);
                                         assert(hCellLengths-imgY == imgY+hCellLengths);
-                                    case HitType_floor:
-                                        imgY = hCellLengths-imgY;
-                                        break;
-                                    case HitType_ceil:
                                         imgY += hCellLengths;
+                                        break;
+                                    //
+                                    case HitType_ceil:
+                                        assert(hitsFloorOrCeil);
+                                        imgY += hCellLengths;
+                                        break;
+                                    case HitType_floor:
+                                        assert(hitsFloorOrCeil);
+                                        imgY = hCellLengths-imgY;
                                         break;
 
                                     default:
                                         assert(false);
                                         break;
                                 }
+
                                 imgY = CEILING_HEIGHT-imgY;
                                 assert(imgY>=0.0 && imgY<1.0);
+
+                                //assert(imgY>=0.0 && imgY<1.0);
+                                if(!(imgY>=0.0 && imgY<1.0))
+                                {
+                                    Deb_line("imgY = %f, opposite = %f, countLen = %f, diffXY = %f.", imgY, opposite, countLen, diffXY)
+                                    colPix[0] = 0;
+                                    colPix[1] = 0xFF;
+                                    colPix[2] = 0;
+                                    break;
+                                }
 
                                 {
                                     int const row = (int)((double)inOutObj->bmpH[cellType]*imgY),
@@ -483,6 +531,8 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                         case CellType_floor_exit:
                             if(!noHit) // Line/"ray" hits floor or ceiling.
                             {
+                                assert(hitsFloorOrCeil);
+
                                 countLen = inOutObj->e[pos];
                                 fillPixel(inOutObj, cellType, dX, dY, y, colPix);
                             }
