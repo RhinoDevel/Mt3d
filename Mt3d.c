@@ -12,8 +12,8 @@
 #include "Calc.h"
 #include "Bmp.h"
 
-static const double CEILING_HEIGHT = 1.0; // 1.0 = Height equals length of one floor/ceiling cell.
-static const double PLAYER_STEP_LEN = 0.2; // Cell lengths.
+static double const CEILING_HEIGHT = 1.0; // 1.0 = Height equals length of one floor/ceiling cell.
+static double const PLAYER_STEP_LEN = 0.2; // Cell lengths.
 static double const PLAYER_ANG_STEP = CALC_TO_RAD(5.0);
 
 /** Return current second of game time.
@@ -33,7 +33,7 @@ static void fill(
     double * const inOutD,
     double * const inOutE,
     double * const inOutEta,
-    bool * const inOutHitsFloor) // e hits ceiling, if false.
+    enum HitType * const inOutHitType)
 {
     assert(inAlpha>0.0 && inAlpha<M_PI);
     assert(inBeta>0.0 && inBeta<M_PI);
@@ -87,33 +87,40 @@ static void fill(
                 aX = yMiddle/tan(betaTopX);
             }
 
-            if(yRot<yMiddle)
+            if(yRot==yMiddle)
             {
-                inOutHitsFloor[pos] = false; // Hits ceiling.
-
-                double const delta = betaTopX-atan((yMiddle-yRot)/aX);
-                assert(delta<betaTopX);
-
-                double const angle = betaTopX-delta;
-                assert(angle<M_PI_2);
-
-                inOutE[pos] = ceilingToEye/sin(angle);
-                inOutD[pos] = inOutE[pos]*cos(angle);
+                inOutHitType[pos] = HitType_none;
+                inOutE[pos] = -1.0; // Infinite
+                inOutD[pos] = -1.0; // Infinite
             }
             else
             {
-                assert(yRot>yMiddle); // (not equal)
+                if(yRot<yMiddle)
+                {
+                    inOutHitType[pos] = HitType_ceil;
 
-                inOutHitsFloor[pos] = true;
+                    double const delta = betaTopX-atan((yMiddle-yRot)/aX);
+                    assert(delta<betaTopX);
 
-                double const delta = betaTopX+atan((yRot-yMiddle)/aX);
-                assert(delta>betaTopX);
+                    double const angle = betaTopX-delta;
+                    assert(angle<M_PI_2);
 
-                double const angle = delta-betaTopX;
-                assert(angle<M_PI_2);
+                    inOutE[pos] = ceilingToEye/sin(angle);
+                    inOutD[pos] = inOutE[pos]*cos(angle);
+                }
+                else
+                {
+                    inOutHitType[pos] = HitType_floor;
 
-                inOutE[pos] = floorToEye/sin(angle);
-                inOutD[pos] = inOutE[pos]*cos(angle);
+                    double const delta = betaTopX+atan((yRot-yMiddle)/aX);
+                    assert(delta>betaTopX);
+
+                    double const angle = delta-betaTopX;
+                    assert(angle<M_PI_2);
+
+                    inOutE[pos] = floorToEye/sin(angle);
+                    inOutD[pos] = inOutE[pos]*cos(angle);
+                }
             }
 
             {
@@ -290,7 +297,7 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
             inOutObj->d,
             inOutObj->e,
             inOutObj->eta,
-            inOutObj->hitsFloor);
+            inOutObj->hitType);
     }
 
     double const kPosY = (double)(inOutObj->map->height-1)-inOutObj->posY,
@@ -439,15 +446,21 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                                 }
                                 assert(imgX>=0.0 && imgX<1.0);
 
-                                if(inOutObj->hitsFloor[pos])
+                                switch(inOutObj->hitType[pos])
                                 {
-                                    imgY = hCellLengths-imgY;
-                                }
-                                else
-                                {
-                                    imgY += hCellLengths;
-                                }
+                                    case HitType_none: // (falls through)
+                                        assert(hCellLengths-imgY == imgY+hCellLengths);
+                                    case HitType_floor:
+                                        imgY = hCellLengths-imgY;
+                                        break;
+                                    case HitType_ceil:
+                                        imgY += hCellLengths;
+                                        break;
 
+                                    default:
+                                        assert(false);
+                                        break;
+                                }
                                 imgY = CEILING_HEIGHT-imgY;
                                 assert(imgY>=0.0 && imgY<1.0);
 
@@ -535,8 +548,8 @@ struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, double const in
     assert(d!=NULL);
     double * const e = malloc(pixelCount*sizeof *e);
     assert(e!=NULL);
-    bool * const hitsFloor = malloc(pixelCount*sizeof *hitsFloor);
-    assert(hitsFloor!=NULL);
+    enum HitType * const hitType = malloc(pixelCount*sizeof *hitType);
+    assert(hitType!=NULL);
 
     double * const eta = malloc(pixelCount*sizeof *eta);
     assert(eta!=NULL);
@@ -556,7 +569,7 @@ struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, double const in
         .d = d,
         .e = e,
         .doFill = false,
-        .hitsFloor = hitsFloor,
+        .hitType = hitType,
 
         .eta = eta,
 

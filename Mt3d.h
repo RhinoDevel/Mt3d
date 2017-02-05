@@ -8,6 +8,7 @@
 #include <stdint.h>
 
 #include "Map.h"
+#include "HitType.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,7 +41,7 @@ struct Mt3d
     double /*const*/ * const d; // One d value for each (x,y) pixel coordinate (in cell lengths).
     double /*const*/ * const e; // One e value for each (x,y) pixel coordinate (in cell lengths).
     bool doFill;
-    bool /*const*/ * const hitsFloor; // e reaches the floor and not the ceiling, if true.
+    enum HitType /*const*/ * const hitType; // e reaches floor, ceiling, or none.
 
     double /*const*/ * const eta; // One value for each (x/y) pixel coordinate (in radian).
 
