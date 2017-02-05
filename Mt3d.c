@@ -500,16 +500,6 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                                 imgY = CEILING_HEIGHT-imgY;
                                 assert(imgY>=0.0 && imgY<1.0);
 
-                                //assert(imgY>=0.0 && imgY<1.0);
-                                if(!(imgY>=0.0 && imgY<1.0))
-                                {
-                                    Deb_line("imgY = %f, opposite = %f, countLen = %f, diffXY = %f.", imgY, opposite, countLen, diffXY)
-                                    colPix[0] = 0;
-                                    colPix[1] = 0xFF;
-                                    colPix[2] = 0;
-                                    break;
-                                }
-
                                 {
                                     int const row = (int)((double)inOutObj->bmpH[cellType]*imgY),
                                         col = (int)((double)inOutObj->bmpH[cellType]*imgX);
