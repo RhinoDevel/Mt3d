@@ -11,9 +11,9 @@
 bool Mt3dInput_setFlagByChar(char const inChar, bool const inVal, struct Mt3dInput * const inOutObj)
 {
     assert(inOutObj!=NULL);
-    
+
     bool retVal = true; // TRUE by default.
-    
+
     switch (inChar)
     {
         case 'x':
@@ -33,13 +33,13 @@ bool Mt3dInput_setFlagByChar(char const inChar, bool const inVal, struct Mt3dInp
             break;
         case 's':
             inOutObj->pos_backward = inVal;
-            break;  
+            break;
         case 'a':
             inOutObj->pos_left = inVal;
             break;
         case 'd':
             inOutObj->pos_right = inVal;
-            break;  
+            break;
         case 'l':
             inOutObj->pos_up = inVal;
             break;
@@ -49,21 +49,27 @@ bool Mt3dInput_setFlagByChar(char const inChar, bool const inVal, struct Mt3dInp
         case 'p':
             inOutObj->fov_wider = inVal;
             break;
-        case 'o': 
+        case 'o':
             inOutObj->fov_narrower = inVal;
             break;
-            
+        case 'n':
+            inOutObj->rot_z_ccw = inVal;
+            break;
+        case 'm':
+            inOutObj->rot_z_cw = inVal;
+            break;
+
         default:
             retVal = false;
             break;
     }
-    
+
     return retVal;
 }
 
 void Mt3dInput_delete(struct Mt3dInput * const inObj)
 {
-    assert(inObj!=NULL); 
+    assert(inObj!=NULL);
     free(inObj);
 }
 
@@ -71,7 +77,7 @@ struct Mt3dInput * Mt3dInput_create()
 {
     struct Mt3dInput * const retVal = malloc(sizeof *retVal);
     assert(retVal!=NULL);
-    
+
     struct Mt3dInput const buf = (struct Mt3dInput)
     {
         .quit = false,
@@ -85,10 +91,12 @@ struct Mt3dInput * Mt3dInput_create()
         .pos_up= false,
         .pos_down= false,
         .fov_wider= false,
-        .fov_narrower = false
+        .fov_narrower = false,
+        .rot_z_ccw = false,
+        .rot_z_cw = false
     };
 
     memcpy(retVal, &buf, sizeof *retVal);
-    
+
     return retVal;
 }

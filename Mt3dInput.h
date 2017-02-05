@@ -13,7 +13,7 @@ extern "C" {
 struct Mt3dInput
 {
     // *** FLAGS SIGNALIZING PRESSED KEYS ***
-    
+
     bool quit;
     bool toggleFullscreen;
     bool ang_left;
@@ -26,6 +26,8 @@ struct Mt3dInput
     bool pos_down;
     bool fov_wider;
     bool fov_narrower;
+    bool rot_z_ccw;
+    bool rot_z_cw;
 };
 
 /** Try to find and set a flag for given character to given value in given object.
