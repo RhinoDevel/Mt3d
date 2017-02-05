@@ -446,8 +446,6 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                             noHit = false;
                             if(hitsFloorOrCeil)
                             {
-                                // MT_TODO: TEST: Isn't d equal to diffXY?
-
                                 countLen = diffXY*inOutObj->e[pos]/inOutObj->d[pos];
                             }
                             else
