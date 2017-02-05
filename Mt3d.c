@@ -73,7 +73,7 @@ static void fill(
                 Calc_fillRotated(x-xMiddle, cY-yMiddle, inTheta, &xRot, &cYrot);
 
                 xRot = xRot+xMiddle;
-                
+
                 cYrot = cYrot+yMiddle;
                 yRot = CALC_CARTESIAN_Y(cYrot, dHeight);
             }
@@ -122,13 +122,12 @@ static void fill(
                     alphaLeftY = asin(xMiddle/sY); // To hold alphaX/2.
                 double epsilon = 0.0;
 
-                if(xRot<xMiddle)
+                if(xRot<=xMiddle) // atan(0) equals 0, so it is OK, if equal.
                 {
                     epsilon = alphaLeftY-atan((xMiddle-xRot)/aX);
                 }
                 else
                 {
-                    assert(xRot!=xMiddle);
                     epsilon = alphaLeftY+atan((xRot-xMiddle)/aX);
                 }
 
@@ -365,7 +364,7 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                         nextX = ( addY==1 && (int)hitY<yForHit ) || ( addY!=1 && hitY>=dblYForHit );
 
                     assert(nextY||nextX);
-                    
+
                     // Debug code to ignore error and try to show frame:
                     //
 //                    if(!(nextY||nextX))
@@ -373,11 +372,11 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
 //                        colPix[0] = 255;
 //                        colPix[1] = 255;
 //                        colPix[2] = 255;
-//                        
+//
 //                        countLen = 1.0;
-//                        break;  
+//                        break;
 //                    }
-                        
+
                     if(nextY)
                     {
                         // Update last reached coordinates:
