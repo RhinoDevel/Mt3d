@@ -1,6 +1,8 @@
 # MT, 2016aug22
 #
-# Original source: http://mrbook.org/blog/tutorials/make/
+# - Original source: http://mrbook.org/blog/tutorials/make/
+#
+# - Install: apt-get install libgtk-3-dev
 
 CC=gcc
 #CFLAGS=-c -O3 -std=gnu11 -Wall `pkg-config gtk+-3.0 --cflags` -DNDEBUG
