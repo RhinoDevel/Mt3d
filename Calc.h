@@ -29,8 +29,8 @@ static double const Calc_PiMul1_5 = 1.5*M_PI; // 270 degree in radian.
 #define CALC_SIGN_FROM_DOUBLE(x) ((int)(0.0<(x))-(int)((x)<0.0))
 #define CALC_DOUBLE_TO_INT_ROUND(x) ((int)((x)+0.5*(double)CALC_SIGN_FROM_DOUBLE(x)))
 
-#define CALC_CARTESIAN_Y(y, h) (h-1.0-y) // Converts y coordinate of a pixel (Y starts at top-left) given as double to Cartesion coordinate (Y starts at bottom-left). Double height of pixel's bitmap is also given.
-#define CALC_INT_TO_DOUBLE_CARTESIAN_Y(y, h) ((double)(h-1)-(double)y) // Converts y coordinate of a pixel (Y starts at top-left) given as integer to Cartesion coordinate (Y starts at bottom-left). Integer height of pixel's bitmap is also given.
+#define CALC_CARTESIAN_Y(y, h) ((h)-1.0-(y)) // Converts y coordinate of a pixel (Y starts at top-left) given as double to Cartesion coordinate (Y starts at bottom-left). Double height of pixel's bitmap is also given.
+#define CALC_INT_TO_DOUBLE_CARTESIAN_Y(y, h) ((double)((h)-1)-(double)(y)) // Converts y coordinate of a pixel (Y starts at top-left) given as integer to Cartesion coordinate (Y starts at bottom-left). Integer height of pixel's bitmap is also given.
 
 /** Return sector of Cartesian coordinate system from 0 to 3 instead of I, II, III, IV (counter-clockwise).
  *
