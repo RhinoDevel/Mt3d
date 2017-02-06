@@ -38,13 +38,6 @@ static double const Calc_PiMul1_5 = 1.5*M_PI; // 270 degree in radian.
  */
 int Calc_getZeroSector(double const inAngle);
 
-/** Fill delta X and delta Y with lengths of opposite and adjacent (or vice versa) sides belonging to hypotenuse and angle given.
- *
- * - Results are in Cartesian coordinates (Y starts at bottom-left and not at top-left).
- * - Assumes: 0 rad <= inAngle < 2*PI rad.
- */
-void Calc_fillDeltas(double const inAngle, double const inHypotenuse, double * const inOutDeltaX, double * const inOutDeltaY);
-
 /** Rotate given point (v, w) in Cartesian coordinates (Y starts at bottom-left and not at top-left)
  *  counter-clockwise (CCW) by angle given in radian
  *  and fill given output parameters x and y, representing rotation result point (x, y).
