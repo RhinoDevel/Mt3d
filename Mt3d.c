@@ -293,7 +293,8 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
             inOutObj->hitType);
     }
 
-    double const kPosY = (double)(inOutObj->map->height-1)-inOutObj->posY,
+    double const mapHeight = (double)inOutObj->map->height,
+        kPosY = CALC_CARTESIAN_Y(inOutObj->posY, mapHeight),
         hCellLengths = CEILING_HEIGHT*inOutObj->h; // Gets height of player's eye in cell lengths.
 
     for(int y = 0;y<inOutObj->height;++y)
@@ -337,7 +338,7 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                 // Get coordinates of cell where the line/"ray" reaches either floor or ceiling:
                 //
                 dX = deltaX+inOutObj->posX;
-                dY = (double)(inOutObj->map->height-1)-(deltaY+kPosY); // Cartesian Y to cell Y coordinate conversion.
+                dY = CALC_CARTESIAN_Y(deltaY+kPosY, mapHeight); // Cartesian Y to cell Y coordinate conversion.
                 dCellX = (int)dX;
                 dCellY = (int)dY;
             }
@@ -447,7 +448,7 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
 
                             {
                                 double const opposite = countLen-diffXY>0?sqrt(countLen*countLen-diffXY*diffXY):0; // Assuming less than 0 occurring for very small values only caused by rounding errors, where countLen and diffXY should be equal. See: http://stackoverflow.com/questions/4453372/sqrt1-0-pow1-0-2-returns-nan
-                                double imgX = nextX?(double)(inOutObj->map->height-1)-kLastY:lastX, // (Cartesian Y to cell Y coordinate conversion, if necessary)
+                                double imgX = nextX?CALC_CARTESIAN_Y(kLastY, mapHeight):lastX, // (Cartesian Y to cell Y coordinate conversion, if necessary)
                                     imgY = opposite;
 
                                 imgX -= (double)((int)imgX); // Removes integer part.
