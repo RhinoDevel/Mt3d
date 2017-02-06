@@ -147,15 +147,8 @@ static void fill(
 
 static bool posStep(struct Mt3d * const inOutObj, double const inIota) // Iota: Complete angle in wanted direction (0 rad <= a < 2*PI rad).
 {
-    double addX = 0.0, // Cell length to add to X position.
-        subY = 0.0, // Cell length to subtract from Y position.
-        x = inOutObj->posX,
-        y = inOutObj->posY;
-
-    Calc_fillRotated(PLAYER_STEP_LEN, 0.0, inIota, &addX, &subY);
-
-    x += addX;
-    y -= subY; // Subtraction, because cell coordinate system starts on top, Cartesian coordinate system at bottom.
+    double const x = inOutObj->posX+PLAYER_STEP_LEN*cos(inIota),
+        y = inOutObj->posY-PLAYER_STEP_LEN*sin(inIota); // Subtraction, because cell coordinate system starts on top, Cartesian coordinate system at bottom.
 
     if((enum CellType)inOutObj->map->cells[(int)y*inOutObj->map->width+(int)x]==CellType_block_default) // MT_TODO: TEST: Player has no width!
     {
@@ -333,10 +326,13 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
 
                 zeta = CALC_ANGLE_TO_POS(zetaUnchecked);
             }
-
+            
+            deltaX = cos(zeta); // With parameter v in rotation matrix
+            deltaY = sin(zeta); // formulas set to 1.0 [see Calc_fillRotated()].
             if(hitsFloorOrCeil)
             {
-                Calc_fillRotated(inOutObj->d[pos], 0.0, zeta, &deltaX, &deltaY);
+                deltaX *= inOutObj->d[pos]; // Using distance as parameter
+                deltaY *= inOutObj->d[pos]; // v of rotation matrix formula.
 
                 // Get coordinates of cell where the line/"ray" reaches either floor or ceiling:
                 //
@@ -345,12 +341,8 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                 dCellX = (int)dX;
                 dCellY = (int)dY;
             }
-            else
-            {
-                Calc_fillRotated(1.0, 0.0, zeta, &deltaX, &deltaY);
-
-                // dX, dY, dCellX and dCellY are invalid!
-            }
+            //
+            // Otherwise: dX, dY, dCellX and dCellY are invalid!
 
             assert(deltaX!=0.0); // Implement special case!
 
