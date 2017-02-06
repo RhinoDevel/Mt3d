@@ -336,7 +336,7 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
 
             if(hitsFloorOrCeil)
             {
-                Calc_fillDeltas(zeta, inOutObj->d[pos], &deltaX, &deltaY); // MT_TODO: TEST: Seems to be a performance bottleneck!
+                Calc_fillRotated(inOutObj->d[pos], 0.0, zeta, &deltaX, &deltaY);
 
                 // Get coordinates of cell where the line/"ray" reaches either floor or ceiling:
                 //
@@ -347,7 +347,7 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
             }
             else
             {
-                Calc_fillDeltas(zeta, 1.0, &deltaX, &deltaY); // MT_TODO: TEST: Seems to be a performance bottleneck!
+                Calc_fillRotated(1.0, 0.0, zeta, &deltaX, &deltaY);
 
                 // dX, dY, dCellX and dCellY are invalid!
             }
