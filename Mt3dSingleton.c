@@ -5,6 +5,7 @@
 #include <assert.h>
 
 #include "Calc.h"
+#include "Mt3dParams.h"
 #include "Mt3d.h"
 #include "Mt3dInput.h"
 #include "MapSample.h"
@@ -268,7 +269,22 @@ void Mt3dSingleton_init(int const inWidth, int const inHeight, int const inMsPer
 
     width = inWidth;
     height = inHeight;
-    o = Mt3d_create(inWidth, height, ALPHA, getBeta(ALPHA), 0.0, H, inMsPerUpdate);
+
+    {
+        struct Mt3dParams * const params = malloc(sizeof *params);
+        assert(params!=NULL);
+
+        params->width = width;
+        params->height = height;
+        params->alpha = ALPHA;
+        params->beta = getBeta(ALPHA);
+        params->theta = 0.0;
+        params->h = H;
+        params->msPerUpdate = inMsPerUpdate;
+
+        o = Mt3d_create(params);
+        free(params);
+    }
 
     o->map = MapSample_create();
     assert(sizeof *o->pixels==1);

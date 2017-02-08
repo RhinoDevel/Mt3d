@@ -327,7 +327,7 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
 
                 zeta = CALC_ANGLE_TO_POS(zetaUnchecked);
             }
-            
+
             deltaX = cos(zeta); // With parameter v in rotation matrix
             deltaY = sin(zeta); // formulas set to 1.0 [see Calc_fillRotated()].
             if(hitsFloorOrCeil)
@@ -365,38 +365,32 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                 int xForHit = cellX+(int)(addX>0),
                     yForHit = (int)kPosY+(int)(addY>0); // (Cartesian Y coordinate)
 
-                // Store last reached coordinates for brightness (and more) calculations:
-                //
-                double lastX = inOutObj->posX,
-                    kLastY = kPosY; // (Cartesian Y coordinate)
-
                 // Values to represent line in Slope-intercept form:
                 //
                 double const m = deltaY/deltaX, // Slope
                     b = kPosY-m*inOutObj->posX; // Y-intercept
 
+                double lastX = inOutObj->posX, // Store last reached coordinates for
+                    kLastY = kPosY,            // brightness (and other) calculations.
+                    hitX = ((double)yForHit-b)/m,
+                    hitY = m*(double)xForHit+b;
+
+                double const tanZeta = tan(zeta),
+                    hitXstep = (double)addY/**1.0*//tanZeta, // 1.0 is cell length.
+                    hitYstep = (double)addX/**1.0*/*tanZeta; // 1.0 is cell length.
+
                 do
                 {
                     double const dblYForHit = (double)yForHit,
-                        dblXForHit = (double)xForHit,
-                        hitX = (dblYForHit-b)/m,
-                        hitY = m*dblXForHit+b;
+                        dblXForHit = (double)xForHit;
+
+                    //hitX = (dblYForHit-b)/m,
+                    //hitY = m*dblXForHit+b;
+
                     bool const nextY = ( addX==1 && (int)hitX<xForHit ) || ( addX!=1 && hitX>=dblXForHit ),
                         nextX = ( addY==1 && (int)hitY<yForHit ) || ( addY!=1 && hitY>=dblYForHit );
 
                     assert(nextY||nextX);
-
-                    // Debug code to ignore error and try to show frame:
-                    //
-//                    if(!(nextY||nextX))
-//                    {
-//                        colPix[0] = 255;
-//                        colPix[1] = 255;
-//                        colPix[2] = 255;
-//
-//                        countLen = 1.0;
-//                        break;
-//                    }
 
                     if(nextY)
                     {
@@ -407,6 +401,8 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
 
                         cellY -= addY;
                         yForHit += addY;
+
+                        hitX += hitXstep;
                     }
                     if(nextX)
                     {
@@ -417,6 +413,8 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
 
                         cellX += addX;
                         xForHit += addX;
+
+                        hitY += hitYstep;
                     }
 
                     assert(cellX>=0 && cellX<inOutObj->map->width);
@@ -568,12 +566,14 @@ void Mt3d_setValues(double const inAlpha, double const inBeta, double const inTh
     //Deb_line("Alpha = %f degree, beta = %f degree, h(-eight) = %f cell length.", CALC_TO_DEG(inAlpha), CALC_TO_DEG(inBeta), inH)
 }
 
-struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, double const inAlpha, double const inBeta, double const inTheta, double const inH, int const inMsPerUpdate)
+struct Mt3d * Mt3d_create(struct Mt3dParams const * const inParams)
 {
+    assert(inParams!=NULL);
+
     struct Mt3d * const retVal = malloc(sizeof *retVal);
     assert(retVal!=NULL);
 
-    size_t const pixelCount = inHeight*inWidth;
+    size_t const pixelCount = inParams->height*inParams->width;
 
     double * const d = malloc(pixelCount*sizeof *d);
     assert(d!=NULL);
@@ -587,14 +587,14 @@ struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, double const in
 
     struct Mt3d /*const*/ buf = (struct Mt3d)
     {
-        .msPerUpdate = inMsPerUpdate,
+        .msPerUpdate = inParams->msPerUpdate,
         .updateCount = 0,
 
-        .width = inWidth,
-        .height = inHeight,
+        .width = inParams->width,
+        .height = inParams->height,
         .alpha = 0.0, // Invalidates
         .beta = 0.0, // Invalidates
-        .theta = 0.0,
+        .theta = -1.0, // Invalidates
         .h = -1.0, // Invalidates
 
         .d = d,
@@ -621,7 +621,7 @@ struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, double const in
 
     memcpy(retVal, &buf, sizeof *retVal);
 
-    Mt3d_setValues(inAlpha, inBeta, inTheta, inH, retVal);
+    Mt3d_setValues(inParams->alpha, inParams->beta, inParams->theta, inParams->h, retVal);
 
     return retVal;
 }

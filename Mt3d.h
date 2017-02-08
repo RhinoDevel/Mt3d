@@ -9,6 +9,7 @@
 
 #include "Map.h"
 #include "HitType.h"
+#include "Mt3dParams.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -71,7 +72,7 @@ void Mt3d_update(struct Mt3d * const inOutObj);
 void Mt3d_draw(struct Mt3d * const inOutObj);
 void Mt3d_delete(struct Mt3d * const inObj);
 void Mt3d_setValues(double const inAlpha, double const inBeta, double const inTheta, double const inH, struct Mt3d * const inOutObj);
-struct Mt3d * Mt3d_create(int const inWidth, int const inHeight, double const inAlpha, double const inBeta, double const inTheta, double const inH, int const inMsPerUpdate);
+struct Mt3d * Mt3d_create(struct Mt3dParams const * const inParams);
 
 #ifdef __cplusplus
 }
