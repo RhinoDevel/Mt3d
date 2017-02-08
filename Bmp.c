@@ -50,20 +50,20 @@ static void flipVertically(unsigned char * const inOutPixels, int const inWidth,
     assert(inOutPixels!=NULL);
     assert(inWidth>0);
     assert(inHeight>0);
-    
+
     size_t const rowByteWidth = inWidth*3*sizeof(unsigned char); // MT_TODO: TEST: Hard-coded for three channels!
     unsigned char * const rowBuf = (unsigned char *)malloc(rowByteWidth);
-    
+
     for(int row = 0;row<inHeight/2;++row)
     {
         unsigned char * const rowPtr = inOutPixels+row*rowByteWidth,
             * const otherRowPtr = inOutPixels+(inHeight-1-row)*rowByteWidth;
-        
+
         memcpy(rowBuf, otherRowPtr, rowByteWidth);
         memcpy(otherRowPtr, rowPtr, rowByteWidth);
         memcpy(rowPtr, rowBuf, rowByteWidth);
     }
-    
+
     free(rowBuf);
 }
 
@@ -74,15 +74,15 @@ void Bmp_write(int const inWidth, int const inHeight, unsigned char const * cons
     assert(inHeight>0);
     assert(inPixels!=NULL);
     assert(inFilePath!=NULL);
-    
+
     struct Bitmap * const bmp = calloc(1, sizeof *bmp);
     uint32_t const pixelByteSize = (inWidth*inHeight*BITS_PER_PIXEL)/8;
-    
+
     bmp->fileHeader.signature[0] = 'B';
     bmp->fileHeader.signature[1] = 'M';
     bmp->fileHeader.fileSize = sizeof *bmp+pixelByteSize;
     bmp->fileHeader.fileOffsetToPixelArr = sizeof *bmp;
-    
+
     bmp->bmpInfoHeader.dibHeaderSize =sizeof bmp->bmpInfoHeader;
     bmp->bmpInfoHeader.width = inWidth;
     bmp->bmpInfoHeader.height = -inHeight; // HARD-CODED top to bottom pixel order by negation!
@@ -94,9 +94,9 @@ void Bmp_write(int const inWidth, int const inHeight, unsigned char const * cons
     bmp->bmpInfoHeader.xPixelPerMeter = X_PIXEL_PER_METER;
     bmp->bmpInfoHeader.numColorsPalette = 0;
     bmp->bmpInfoHeader.mostImpColor = 0;
-    
+
     FILE * const fp = fopen(inFilePath,"wb");
-    
+
     fwrite(bmp, 1, sizeof *bmp ,fp);
     fwrite(inPixels, 1, pixelByteSize, fp);
     fclose(fp);
@@ -104,7 +104,7 @@ void Bmp_write(int const inWidth, int const inHeight, unsigned char const * cons
 }
 
 /** Return image data from bitmap file at given path. Not really correctly implemented for all kinds of bitmaps.
- * 
+ *
  * - See: http://stackoverflow.com/questions/14279242/read-bitmap-file-into-structure#14279511
  */
 unsigned char * Bmp_read(char const * const inFilePath, int * const inOutWidth, int * const inOutHeight)
@@ -121,7 +121,7 @@ unsigned char * Bmp_read(char const * const inFilePath, int * const inOutWidth, 
 
     *inOutWidth = -1;
     *inOutHeight = -1;
-    
+
     filePtr = fopen(inFilePath, "rb");
     if(filePtr==NULL)
     {
@@ -140,7 +140,7 @@ unsigned char * Bmp_read(char const * const inFilePath, int * const inOutWidth, 
 
     fseek(filePtr, fileHeader.fileOffsetToPixelArr, SEEK_SET);
 
-    imgData = (unsigned char *)malloc(infoHeader.imgSize);
+    imgData = malloc(infoHeader.imgSize);
     if (imgData==NULL)
     {
         fclose(filePtr);
@@ -153,7 +153,7 @@ unsigned char * Bmp_read(char const * const inFilePath, int * const inOutWidth, 
     {
         flipVertically(imgData, infoHeader.width, infoHeader.height);
     }
-    
+
     fclose(filePtr);
     *inOutWidth = infoHeader.width;
     *inOutHeight = abs(infoHeader.height);
