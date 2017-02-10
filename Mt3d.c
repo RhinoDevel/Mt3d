@@ -435,13 +435,11 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                                 diffXY = sqrt(diffY*diffY+diffX*diffX);
 
                             noHit = false;
+
+                            countLen = diffXY;
                             if(hitsFloorOrCeil)
                             {
-                                countLen = diffXY*inOutObj->e[pos]/inOutObj->d[pos];
-                            }
-                            else
-                            {
-                                countLen = diffXY;
+                                countLen *= inOutObj->e[pos]/inOutObj->d[pos]; // Because countLen was set to diffXY (in this case not correct) and [correct ]countLen/diffXY equals inOutObj->e[pos]/inOutObj->d[pos].
                             }
 
                             {
@@ -450,21 +448,13 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                                     imgY = opposite;
 
                                 imgX -= (double)((int)imgX); // Removes integer part.
-                                if(nextX)
+
+                                if((nextX && addX!=1)||(!nextX && addY!=1))
                                 {
-                                    if(addX<0.0)
-                                    {
-                                        imgX = 1.0-imgX;
-                                    }
+                                    imgX = 1.0-imgX;
                                 }
-                                else
-                                {
-                                    if(addY<0.0)
-                                    {
-                                        imgX = 1.0-imgX;
-                                    }
-                                }
-                                assert(imgX>=0.0 && imgX<1.0);
+
+                                assert(imgX>=0.0 && imgX<1.0); // MT_TODO: TEST: Happens sometimes (with rotation)!
 
                                 switch(inOutObj->hitType[pos])
                                 {
