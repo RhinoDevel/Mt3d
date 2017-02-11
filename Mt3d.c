@@ -20,16 +20,12 @@ static double const PLAYER_ANG_STEP = CALC_TO_RAD(5.0);
  */
 static uint64_t getSecond(struct Mt3d const * const inObj)
 {
-    return (inObj->updateCount*(uint64_t)inObj->msPerUpdate)/1000;
+    return (inObj->updateCount*(uint64_t)inObj->constants.msPerUpdate)/1000;
 }
 
 static void fill(
-    int const inWidth,
-    int const inHeight,
-    double const inAlpha,
-    double const inBeta,
-    double const inTheta, // CCW angle in radian describing z-axis rotation.
-    double const inH,
+    struct Mt3dConstants const * const inC,
+    struct Mt3dVariables const * const inV,
     double * const inOutD,
     double * const inOutE,
     double * const inOutEta,
@@ -37,32 +33,32 @@ static void fill(
     double * const inOutFloorToEye,
     double * const inOutCeilingToEye)
 {
-    assert(inAlpha>0.0 && inAlpha<M_PI);
-    assert(inBeta>0.0 && inBeta<M_PI);
-    assert(inTheta>=0.0 && inTheta<Calc_PiMul2);
-    assert(inHeight%2==0);
-    assert(inWidth%2==0);
+    assert(inV->alpha>0.0 && inV->alpha<M_PI);
+    assert(inV->beta>0.0 && inV->beta<M_PI);
+    assert(inV->theta>=0.0 && inV->theta<Calc_PiMul2);
+    assert(inC->res.h%2==0);
+    assert(inC->res.w%2==0);
 
     int x = 0,
         y = 0;
 
-    double const dHeight = (double)inHeight,
-        xMiddle = (double)(inWidth-1)/2.0,
+    double const dHeight = (double)inC->res.h,
+        xMiddle = (double)(inC->res.w-1)/2.0,
         yMiddle = (dHeight-1.0)/2.0,
-        sXmiddle = yMiddle/sin(inBeta/2.0),
-        sYmiddle = xMiddle/sin(inAlpha/2.0),
+        sXmiddle = yMiddle/sin(inV->beta/2.0),
+        sYmiddle = xMiddle/sin(inV->alpha/2.0),
         sXmiddleSqr = sXmiddle*sXmiddle,
         sYmiddleSqr = sYmiddle*sYmiddle;
 
-    *inOutFloorToEye = inH*CEILING_HEIGHT; // (cell lengths)
+    *inOutFloorToEye = inV->h*CEILING_HEIGHT; // (cell lengths)
     *inOutCeilingToEye = CEILING_HEIGHT-*inOutFloorToEye; // (cell lengths)
 
-    for(y = 0;y<inHeight;++y)
+    for(y = 0;y<inC->res.h;++y)
     {
-        int const rowPos = y*inWidth;
+        int const rowPos = y*inC->res.w;
         double const cY = CALC_CARTESIAN_Y((double)y, dHeight);
 
-        for(x = 0;x<inWidth;++x)
+        for(x = 0;x<inC->res.w;++x)
         {
             int const pos = rowPos+x;
             double xRot = -1.0,
@@ -73,7 +69,7 @@ static void fill(
             { // Calculate rotated x and y coordinates in pixel/bitmap coordinates (Y starts at top-left):
                 double cYrot = -1.0;
 
-                Calc_fillRotated(x-xMiddle, cY-yMiddle, inTheta, &xRot, &cYrot);
+                Calc_fillRotated(x-xMiddle, cY-yMiddle, inV->theta, &xRot, &cYrot);
 
                 xRot = xRot+xMiddle;
 
@@ -284,12 +280,8 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
     {
         inOutObj->doFill = false;
         fill(
-            inOutObj->width,
-            inOutObj->height,
-            inOutObj->alpha,
-            inOutObj->beta,
-            inOutObj->theta,
-            inOutObj->h,
+            &inOutObj->constants,
+            &inOutObj->variables,
             inOutObj->d,
             inOutObj->e,
             inOutObj->eta,
@@ -299,17 +291,15 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
     }
 
     double const mapHeight = (double)inOutObj->map->height,
-        kPosY = CALC_CARTESIAN_Y(inOutObj->posY, mapHeight),
-        hCellLengths = CEILING_HEIGHT*inOutObj->h; // Gets height of player's eye in cell lengths.
-
-    for(int y = 0;y<inOutObj->height;++y)
+        kPosY = CALC_CARTESIAN_Y(inOutObj->posY, mapHeight);
+    for(int y = 0;y<inOutObj->constants.res.h;++y)
     {
         int const truncPosX = (int)inOutObj->posX,
             truncPosY = (int)inOutObj->posY,
-            rowByWidth = y*inOutObj->width;
+            rowByWidth = y*inOutObj->constants.res.w;
         uint32_t * const rowPix = (uint32_t*)inOutObj->pixels+rowByWidth;
 
-        for(int x = 0;x<inOutObj->width;++x)
+        for(int x = 0;x<inOutObj->constants.res.w;++x)
         {
             double deltaX = -1.0,
                 deltaY = -1.0,
@@ -467,17 +457,17 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                                 {
                                     case HitType_none:
                                         assert(!hitsFloorOrCeil);
-                                        assert(hCellLengths-imgY == imgY+hCellLengths);
-                                        imgY += hCellLengths;
+                                        assert(inOutObj->floorToEye-imgY == imgY+inOutObj->floorToEye);
+                                        imgY += inOutObj->floorToEye;
                                         break;
                                     //
                                     case HitType_ceil:
                                         assert(hitsFloorOrCeil);
-                                        imgY += hCellLengths;
+                                        imgY += inOutObj->floorToEye;
                                         break;
                                     case HitType_floor:
                                         assert(hitsFloorOrCeil);
-                                        imgY = hCellLengths-imgY;
+                                        imgY = inOutObj->floorToEye-imgY;
                                         break;
 
                                     default:
@@ -552,15 +542,13 @@ void Mt3d_delete(struct Mt3d * const inObj)
     free(inObj);
 }
 
-void Mt3d_setValues(double const inAlpha, double const inBeta, double const inTheta, double const inH, struct Mt3d * const inOutObj)
+void Mt3d_setVariables(struct Mt3dVariables const * const inVariables, struct Mt3d * const inOutObj)
 {
-    inOutObj->doFill = true; // Triggers late fill() call by Mt3d_draw(), when needed.
-    inOutObj->alpha = inAlpha;
-    inOutObj->beta = inBeta;
-    inOutObj->theta = inTheta;
-    inOutObj->h = inH;
+    assert(inVariables!=NULL);
+    assert(inOutObj!=NULL);
 
-    //Deb_line("Alpha = %f degree, beta = %f degree, h(-eight) = %f cell length.", CALC_TO_DEG(inAlpha), CALC_TO_DEG(inBeta), inH)
+    inOutObj->doFill = true; // Triggers late fill() call by Mt3d_draw(), when needed.
+    inOutObj->variables = *inVariables;
 }
 
 struct Mt3d * Mt3d_create(struct Mt3dParams const * const inParams)
@@ -570,7 +558,7 @@ struct Mt3d * Mt3d_create(struct Mt3dParams const * const inParams)
     struct Mt3d * const retVal = malloc(sizeof *retVal);
     assert(retVal!=NULL);
 
-    size_t const pixelCount = inParams->height*inParams->width;
+    size_t const pixelCount = inParams->constants.res.h*inParams->constants.res.w;
 
     double * const d = malloc(pixelCount*sizeof *d);
     assert(d!=NULL);
@@ -582,34 +570,28 @@ struct Mt3d * Mt3d_create(struct Mt3dParams const * const inParams)
     double * const eta = malloc(pixelCount*sizeof *eta);
     assert(eta!=NULL);
 
-    struct Mt3d /*const*/ buf = (struct Mt3d)
+    struct Mt3d buf = (struct Mt3d)
     {
-        .msPerUpdate = inParams->msPerUpdate,
-        .updateCount = 0,
+        //.bmp
 
-        .width = inParams->width,
-        .height = inParams->height,
-        .alpha = 0.0, // Invalidates
-        .beta = 0.0, // Invalidates
-        .theta = -1.0, // Invalidates
-        .h = -1.0, // Invalidates
+        .constants = inParams->constants,
+
+        //.variables
 
         .floorToEye = -1.0, // Invalidates
         .ceilingToEye = -1.0, // Invalidates
         .d = d,
         .e = e,
-        .doFill = false,
         .hitType = hitType,
-
         .eta = eta,
 
+        .doFill = false,
+        .updateCount = 0,
         .posX = 0.0,
         .posY = 0.0,
         .gamma = 0.0,
         .map = NULL,
         .pixels = NULL,
-
-//        .bmp
     };
 
     buf.bmp[CellType_floor_default] = Bmp_load("wood-320x320.bmp");
@@ -618,7 +600,7 @@ struct Mt3d * Mt3d_create(struct Mt3dParams const * const inParams)
 
     memcpy(retVal, &buf, sizeof *retVal);
 
-    Mt3d_setValues(inParams->alpha, inParams->beta, inParams->theta, inParams->h, retVal);
+    Mt3d_setVariables(&inParams->variables, retVal);
 
     return retVal;
 }

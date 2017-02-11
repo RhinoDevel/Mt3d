@@ -11,6 +11,8 @@
 #include "Map.h"
 #include "HitType.h"
 #include "Mt3dParams.h"
+#include "Mt3dConstants.h"
+#include "Mt3dVariables.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,36 +30,30 @@ struct Mt3d
     // *** INPUT CONSTANTS ***
     // ***********************
 
-    int const msPerUpdate;// Milliseconds of game time per update call.
+    struct Mt3dConstants const constants;
 
-    // Pixel resolution:
+    // ***********************
+    // *** INPUT VARIABLES ***
+    // ***********************
     //
-    int const width;
-    int const height;
+    struct Mt3dVariables variables;
 
-    double /*const*/ alpha; // Horizontal range of view (radian). Better be below 180 degree.
-    double /*const*/ beta; // Vertical range of view (radian). Better be below 180 degree.
-    double /*const*/ theta; // CCW rotation of Z-axis.
-
-    double /*const*/ h; // Height of players eye as fraction of ceiling height (ceiling height is measured in cell lengths).
-
-    // ****************************
-    // *** CALCULATED CONSTANTS ***
-    // ****************************
+    // *****************************
+    // *** CALCULATED FROM INPUT ***
+    // *****************************
 
     double floorToEye; // (in cell lengths)
     double ceilingToEye; // (in cell lengths)
-    double /*const*/ * const d; // One d value for each (x,y) pixel coordinate (in cell lengths).
-    double /*const*/ * const e; // One e value for each (x,y) pixel coordinate (in cell lengths).
-    bool doFill;
-    enum HitType /*const*/ * const hitType; // e reaches floor, ceiling, or none.
-
-    double /*const*/ * const eta; // One value for each (x/y) pixel coordinate (in radian).
+    double * const d; // One d value for each (x,y) pixel coordinate (in cell lengths).
+    double * const e; // One e value for each (x,y) pixel coordinate (in cell lengths).
+    enum HitType * const hitType; // e reaches floor, ceiling, or none.
+    double * const eta; // One value for each (x/y) pixel coordinate (in radian).
 
     // **********************
     // *** CURRENT VALUES ***
     // **********************
 
+    bool doFill;
     uint64_t updateCount; // Elapsed steps of game time (updateCount * msPerUpdate = elapsed milliseconds of game time).
 
     // Sub-pixel position of player:
@@ -77,7 +73,7 @@ bool Mt3d_pos_leftOrRight(struct Mt3d * const inOutObj, bool inLeft);
 void Mt3d_update(struct Mt3d * const inOutObj);
 void Mt3d_draw(struct Mt3d * const inOutObj);
 void Mt3d_delete(struct Mt3d * const inObj);
-void Mt3d_setValues(double const inAlpha, double const inBeta, double const inTheta, double const inH, struct Mt3d * const inOutObj);
+void Mt3d_setVariables(struct Mt3dVariables const * const inVariables, struct Mt3d * const inOutObj);
 struct Mt3d * Mt3d_create(struct Mt3dParams const * const inParams);
 
 #ifdef __cplusplus

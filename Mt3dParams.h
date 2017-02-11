@@ -4,6 +4,9 @@
 #ifndef MT_3D_PARAMS
 #define MT_3D_PARAMS
 
+#include "Mt3dConstants.h"
+#include "Mt3dVariables.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -12,13 +15,8 @@ extern "C" {
  */
 struct Mt3dParams
 {
-    int width;
-    int height;
-    double alpha;
-    double beta;
-    double theta;
-    double h;
-    int msPerUpdate;
+    struct Mt3dConstants constants;
+    struct Mt3dVariables variables;
 };
 
 #ifdef __cplusplus

@@ -43,17 +43,27 @@ static bool pos_up()
 
     double h = 0.0;
 
-    if(o->h==H_MAX)
+    if(o->variables.h==H_MAX)
     {
         return false;
     }
 
-    h = o->h+H_STEP;
+    h = o->variables.h+H_STEP;
     if(h>H_MAX)
     {
         h = H_MAX;
     }
-    Mt3d_setValues(o->alpha, o->beta, o->theta, h, o);
+
+    {
+        struct Mt3dVariables v = (struct Mt3dVariables)
+        {
+            .alpha = o->variables.alpha,
+            .beta = o->variables.beta,
+            .theta = o->variables.theta,
+            .h = h
+        };
+        Mt3d_setVariables(&v, o);
+    }
     return true;
 }
 static bool pos_down()
@@ -62,17 +72,27 @@ static bool pos_down()
 
     double h = 0.0;
 
-    if(o->h==H_MIN)
+    if(o->variables.h==H_MIN)
     {
         return false;
     }
 
-    h = o->h-H_STEP;
+    h = o->variables.h-H_STEP;
     if(h<H_MIN)
     {
         h = H_MIN;
     }
-    Mt3d_setValues(o->alpha, o->beta, o->theta, h, o);
+
+    {
+        struct Mt3dVariables v = (struct Mt3dVariables)
+        {
+            .alpha = o->variables.alpha,
+            .beta = o->variables.beta,
+            .theta = o->variables.theta,
+            .h = h
+        };
+        Mt3d_setVariables(&v, o);
+    }
     return true;
 }
 static bool fov_wider()
@@ -81,17 +101,27 @@ static bool fov_wider()
 
     assert(o!=NULL);
 
-    if(o->alpha==ALPHA_MAX)
+    if(o->variables.alpha==ALPHA_MAX)
     {
         return false;
     }
 
-    alpha = o->alpha+ALPHA_STEP;
+    alpha = o->variables.alpha+ALPHA_STEP;
     if(alpha>ALPHA_MAX)
     {
         alpha = ALPHA_MAX;
     }
-    Mt3d_setValues(alpha, getBeta(alpha), o->theta, o->h, o);
+
+    {
+        struct Mt3dVariables v = (struct Mt3dVariables)
+        {
+            .alpha = alpha,
+            .beta = getBeta(alpha),
+            .theta = o->variables.theta,
+            .h = o->variables.h
+        };
+        Mt3d_setVariables(&v, o);
+    }
     return true;
 }
 static bool fov_narrower()
@@ -100,45 +130,75 @@ static bool fov_narrower()
 
     assert(o!=NULL);
 
-    if(o->alpha==ALPHA_MIN)
+    if(o->variables.alpha==ALPHA_MIN)
     {
         return false;
     }
 
-    alpha = o->alpha-ALPHA_STEP;
+    alpha = o->variables.alpha-ALPHA_STEP;
     if(alpha<ALPHA_MIN)
     {
         alpha = ALPHA_MIN;
     }
-    Mt3d_setValues(alpha, getBeta(alpha), o->theta, o->h, o);
+
+    {
+        struct Mt3dVariables v = (struct Mt3dVariables)
+        {
+            .alpha = alpha,
+            .beta = getBeta(alpha),
+            .theta = o->variables.theta,
+            .h = o->variables.h
+        };
+        Mt3d_setVariables(&v, o);
+    }
     return true;
 }
 static bool rot_z_ccw()
 {
     assert(o!=NULL);
 
-    double theta = o->theta;
+    double theta = o->variables.theta;
 
     theta += THETA_STEP;
     if(theta>=Calc_PiMul2)
     {
         theta = 0.0;
     }
-    Mt3d_setValues(o->alpha, o->beta, theta, o->h, o);
+
+    {
+        struct Mt3dVariables v = (struct Mt3dVariables)
+        {
+            .alpha = o->variables.alpha,
+            .beta = o->variables.beta,
+            .theta = theta,
+            .h = o->variables.h
+        };
+        Mt3d_setVariables(&v, o);
+    }
     return true;
 }
 static bool rot_z_cw()
 {
     assert(o!=NULL);
 
-    double theta = o->theta;
+    double theta = o->variables.theta;
 
     theta -= THETA_STEP;
     if(theta<0.0)
     {
         theta = Calc_PiMul2-THETA_STEP;
     }
-    Mt3d_setValues(o->alpha, o->beta, theta, o->h, o);
+
+    {
+        struct Mt3dVariables v = (struct Mt3dVariables)
+        {
+            .alpha = o->variables.alpha,
+            .beta = o->variables.beta,
+            .theta = theta,
+            .h = o->variables.h
+        };
+        Mt3d_setVariables(&v, o);
+    }
     return true;
 }
 
@@ -215,12 +275,12 @@ static void applyInput()
 int Mt3dSingleton_getWidth()
 {
     assert(o!=NULL);
-    return o->width;
+    return o->constants.res.w;
 }
 int Mt3dSingleton_getHeight()
 {
     assert(o!=NULL);
-    return o->height;
+    return o->constants.res.h;
 }
 unsigned char * Mt3dSingleton_getPixels()
 {
@@ -274,13 +334,18 @@ void Mt3dSingleton_init(int const inWidth, int const inHeight, int const inMsPer
         struct Mt3dParams * const params = malloc(sizeof *params);
         assert(params!=NULL);
 
-        params->width = width;
-        params->height = height;
-        params->alpha = ALPHA;
-        params->beta = getBeta(ALPHA);
-        params->theta = 0.0;
-        params->h = H;
-        params->msPerUpdate = inMsPerUpdate;
+        params->constants.msPerUpdate = inMsPerUpdate;
+        params->constants.res =
+            (struct Dim)
+            {
+                .w = width,
+                .h = height
+            };
+
+        params->variables.alpha = ALPHA;
+        params->variables.beta = getBeta(ALPHA);
+        params->variables.theta = 0.0;
+        params->variables.h = H;
 
         o = Mt3d_create(params);
         free(params);
@@ -293,21 +358,6 @@ void Mt3dSingleton_init(int const inWidth, int const inHeight, int const inMsPer
     o->posX = o->map->posX;
     o->posY = o->map->posY;
     o->gamma = o->map->gamma;
-
-//    for(int row = 0, col = 0;row<height;++row)
-//    {
-//        uint32_t * const rowPix = ((uint32_t*)o->pixels)+row*width;
-//
-//        for(col = 0;col<width;++col)
-//        {
-//            uint8_t * const colPix = (uint8_t*)(rowPix+col);
-//
-//            colPix[0] = 0xFF; // Blue
-//            colPix[1] = 0x0; // Green
-//            colPix[2] = 0xFF; // Red
-//            //colPix[3] = 0xFF; // (unused)
-//        }
-//    }
 
     Mt3dSingleton_draw();
 }
