@@ -67,7 +67,7 @@ static void flipVertically(unsigned char * const inOutPixels, int const inWidth,
     free(rowBuf);
 }
 
-void Bmp_write(int const inWidth, int const inHeight, unsigned char const * const inPixels, char const * const inFilePath)
+static void save(int const inWidth, int const inHeight, unsigned char const * const inPixels, char const * const inFilePath)
 {
     assert(!Sys_is_big_endian());
     assert(inWidth>0);
@@ -107,7 +107,7 @@ void Bmp_write(int const inWidth, int const inHeight, unsigned char const * cons
  *
  * - See: http://stackoverflow.com/questions/14279242/read-bitmap-file-into-structure#14279511
  */
-unsigned char * Bmp_read(char const * const inFilePath, int * const inOutWidth, int * const inOutHeight)
+static unsigned char * load(char const * const inFilePath, int * const inOutWidth, int * const inOutHeight)
 {
     assert(!Sys_is_big_endian());
     assert(inFilePath!=NULL);
@@ -158,4 +158,41 @@ unsigned char * Bmp_read(char const * const inFilePath, int * const inOutWidth, 
     *inOutWidth = infoHeader.width;
     *inOutHeight = abs(infoHeader.height);
     return imgData;
+}
+
+void Bmp_delete(struct Bmp * const inBmp)
+{
+    assert(inBmp!=NULL);
+
+    assert(inBmp->p!=NULL);
+    free(inBmp->p);
+
+    free(inBmp);
+}
+
+void Bmp_save(struct Bmp const * const inBmp, char const * const inFilePath)
+{
+    assert(inBmp!=NULL);
+    save(inBmp->d.w, inBmp->d.h, inBmp->p, inFilePath);
+}
+
+/** Load bitmap from file.
+ *
+ * - Caller takes ownership. Free by calling Bmp_delete().
+ */
+struct Bmp * Bmp_load(char const * const inFilePath)
+{
+    struct Bmp * const retVal = malloc(sizeof *retVal);
+    struct Dim d;
+    unsigned char * const p = load(inFilePath, &d.w, &d.h);
+
+    assert(retVal!=NULL);
+
+    struct Bmp const buf = (struct Bmp)
+    {
+        .p = p,
+        .d = d
+    };
+    memcpy(retVal, &buf, sizeof *retVal);
+    return retVal;
 }

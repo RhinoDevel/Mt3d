@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "Dim.h"
 #include "Map.h"
 #include "HitType.h"
 #include "Mt3dParams.h"
@@ -17,12 +18,17 @@ extern "C" {
 
 struct Mt3d
 {
+    // ************
+    // *** DATA ***
+    // ************
+
+    struct Bmp * bmp[CellType_COUNT];
+
     // ***********************
     // *** INPUT CONSTANTS ***
     // ***********************
 
     int const msPerUpdate;// Milliseconds of game time per update call.
-    uint64_t updateCount; // Elapsed steps of game time (updateCount * msPerUpdate = elapsed milliseconds of game time).
 
     // Pixel resolution:
     //
@@ -39,6 +45,8 @@ struct Mt3d
     // *** CALCULATED CONSTANTS ***
     // ****************************
 
+    double floorToEye; // (in cell lengths)
+    double ceilingToEye; // (in cell lengths)
     double /*const*/ * const d; // One d value for each (x,y) pixel coordinate (in cell lengths).
     double /*const*/ * const e; // One e value for each (x,y) pixel coordinate (in cell lengths).
     bool doFill;
@@ -50,16 +58,14 @@ struct Mt3d
     // *** CURRENT VALUES ***
     // **********************
 
+    uint64_t updateCount; // Elapsed steps of game time (updateCount * msPerUpdate = elapsed milliseconds of game time).
+
     // Sub-pixel position of player:
     //
     double posX;
     double posY;
 
     double gamma; // Angle (radian) telling the player's view direction.
-
-    unsigned char * bmpPix[CellType_COUNT];
-    int bmpW[CellType_COUNT];
-    int bmpH[CellType_COUNT];
 
     struct Map * map; // Does NOT take ownership.
     unsigned char * pixels; // Does NOT take ownership.

@@ -33,7 +33,9 @@ static void fill(
     double * const inOutD,
     double * const inOutE,
     double * const inOutEta,
-    enum HitType * const inOutHitType)
+    enum HitType * const inOutHitType,
+    double * const inOutFloorToEye,
+    double * const inOutCeilingToEye)
 {
     assert(inAlpha>0.0 && inAlpha<M_PI);
     assert(inBeta>0.0 && inBeta<M_PI);
@@ -47,12 +49,13 @@ static void fill(
     double const dHeight = (double)inHeight,
         xMiddle = (double)(inWidth-1)/2.0,
         yMiddle = (dHeight-1.0)/2.0,
-        floorToEye = inH*CEILING_HEIGHT, // (cell lengths)
-        ceilingToEye = CEILING_HEIGHT-floorToEye, // (cell lengths)
         sXmiddle = yMiddle/sin(inBeta/2.0),
         sYmiddle = xMiddle/sin(inAlpha/2.0),
         sXmiddleSqr = sXmiddle*sXmiddle,
         sYmiddleSqr = sYmiddle*sYmiddle;
+
+    *inOutFloorToEye = inH*CEILING_HEIGHT; // (cell lengths)
+    *inOutCeilingToEye = CEILING_HEIGHT-*inOutFloorToEye; // (cell lengths)
 
     for(y = 0;y<inHeight;++y)
     {
@@ -105,7 +108,7 @@ static void fill(
                     double const angle = betaTopX-delta;
                     assert(angle<M_PI_2);
 
-                    inOutE[pos] = ceilingToEye/sin(angle);
+                    inOutE[pos] = *inOutCeilingToEye/sin(angle);
                     inOutD[pos] = inOutE[pos]*cos(angle);
                 }
                 else
@@ -118,7 +121,7 @@ static void fill(
                     double const angle = delta-betaTopX;
                     assert(angle<M_PI_2);
 
-                    inOutE[pos] = floorToEye/sin(angle);
+                    inOutE[pos] = *inOutFloorToEye/sin(angle);
                     inOutD[pos] = inOutE[pos]*cos(angle);
                 }
             }
@@ -188,10 +191,10 @@ static inline void fillPixel_floor(struct Mt3d const * const inObj, enum CellTyp
 {
     double const imgX = inDx-(double)((int)inDx), // Removes integer part.
         imgY = inDy-(double)((int)inDy); // Removes integer part.
-    int const row = (int)((double)inObj->bmpH[inCellType]*imgY),
-        col = (int)((double)inObj->bmpH[inCellType]*imgX);
+    int const row = (int)((double)inObj->bmp[inCellType]->d.h*imgY),
+        col = (int)((double)inObj->bmp[inCellType]->d.h*imgX);
 
-    unsigned char const * const channelZeroPtr = inObj->bmpPix[inCellType]+3*inObj->bmpW[inCellType]*row+3*col;
+    unsigned char const * const channelZeroPtr = inObj->bmp[inCellType]->p+3*inObj->bmp[inCellType]->d.w*row+3*col;
 
     inOutPix[0] = channelZeroPtr[0];
     inOutPix[1] = channelZeroPtr[1];
@@ -290,7 +293,9 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
             inOutObj->d,
             inOutObj->e,
             inOutObj->eta,
-            inOutObj->hitType);
+            inOutObj->hitType,
+            &inOutObj->floorToEye,
+            &inOutObj->ceilingToEye);
     }
 
     double const mapHeight = (double)inOutObj->map->height,
@@ -442,6 +447,8 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                                 countLen *= inOutObj->e[pos]/inOutObj->d[pos]; // Because countLen was set to diffXY (in this case not correct) and [correct ]countLen/diffXY equals inOutObj->e[pos]/inOutObj->d[pos].
                             }
 
+                            //*** HIER WEITER: Use floorToEye and/or ceilingToEye instead of square root stuff! ***
+
                             {
                                 double const opposite = countLen-diffXY>0?sqrt(countLen*countLen-diffXY*diffXY):0; // Assuming less than 0 occurring for very small values only caused by rounding errors, where countLen and diffXY should be equal. See: http://stackoverflow.com/questions/4453372/sqrt1-0-pow1-0-2-returns-nan
                                 double imgX = nextX?CALC_CARTESIAN_Y(kLastY, mapHeight):lastX, // (Cartesian Y to cell Y coordinate conversion, if necessary)
@@ -482,10 +489,10 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                                 assert(imgY>=0.0 && imgY<1.0);
 
                                 {
-                                    int const row = (int)((double)inOutObj->bmpH[cellType]*imgY),
-                                        col = (int)((double)inOutObj->bmpH[cellType]*imgX);
+                                    int const row = (int)((double)inOutObj->bmp[cellType]->d.h*imgY),
+                                        col = (int)((double)inOutObj->bmp[cellType]->d.h*imgX);
 
-                                    unsigned char const * const channelZeroPtr = inOutObj->bmpPix[cellType]+3*inOutObj->bmpW[cellType]*row+3*col;
+                                    unsigned char const * const channelZeroPtr = inOutObj->bmp[cellType]->p+3*inOutObj->bmp[cellType]->d.w*row+3*col;
 
                                     colPix[0] = channelZeroPtr[0];
                                     colPix[1] = channelZeroPtr[1];
@@ -539,7 +546,7 @@ void Mt3d_delete(struct Mt3d * const inObj)
 
     for(int i = 0;i<CellType_COUNT;++i)
     {
-        free(inObj->bmpPix[i]);
+        Bmp_delete(inObj->bmp[i]);
     }
 
     free(inObj);
@@ -587,6 +594,8 @@ struct Mt3d * Mt3d_create(struct Mt3dParams const * const inParams)
         .theta = -1.0, // Invalidates
         .h = -1.0, // Invalidates
 
+        .floorToEye = -1.0, // Invalidates
+        .ceilingToEye = -1.0, // Invalidates
         .d = d,
         .e = e,
         .doFill = false,
@@ -600,14 +609,12 @@ struct Mt3d * Mt3d_create(struct Mt3dParams const * const inParams)
         .map = NULL,
         .pixels = NULL,
 
-//        .bmpPix
-//        .bmpW
-//        .bmpH
+//        .bmp
     };
 
-    buf.bmpPix[CellType_floor_default] = Bmp_read("wood-320x320.bmp", &buf.bmpW[CellType_floor_default], &buf.bmpH[CellType_floor_default]);
-    buf.bmpPix[CellType_block_default] = Bmp_read("brick-320x320.bmp", &buf.bmpW[CellType_block_default], &buf.bmpH[CellType_block_default]);
-    buf.bmpPix[CellType_floor_exit] = Bmp_read("gradient-redblue-120x120.bmp", &buf.bmpW[CellType_floor_exit], &buf.bmpH[CellType_floor_exit]);
+    buf.bmp[CellType_floor_default] = Bmp_load("wood-320x320.bmp");
+    buf.bmp[CellType_block_default] = Bmp_load("brick-320x320.bmp");
+    buf.bmp[CellType_floor_exit] = Bmp_load("gradient-redblue-120x120.bmp");
 
     memcpy(retVal, &buf, sizeof *retVal);
 
