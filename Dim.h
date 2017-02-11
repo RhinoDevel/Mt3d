@@ -1,13 +1,13 @@
 
 // MT, 2017jan24
 
-#ifndef MT_DIm
+#ifndef MT_DIM
 #define MT_DIM
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-    
+
 struct Dim
 {
     int w;
