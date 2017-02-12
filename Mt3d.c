@@ -441,7 +441,7 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                             {
                                 double const opposite = countLen-absDiffXy>0?sqrt(countLen*countLen-absDiffXy*absDiffXy):0; // Assuming less than 0 occurring for very small values only caused by rounding errors, where countLen and absDiffXy should be equal. See: http://stackoverflow.com/questions/4453372/sqrt1-0-pow1-0-2-returns-nan
                                 double imgX = nextX?CALC_CARTESIAN_Y(kLastY, mapHeight):lastX, // (Cartesian Y to cell Y coordinate conversion, if necessary)
-                                    imgY = opposite;
+                                    imgY = inOutObj->floorToEye; // Correct value, if ray does not hit anything / is a straight line.
 
                                 imgX -= (double)((int)imgX); // Removes integer part.
 
@@ -456,17 +456,14 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                                 {
                                     case HitType_none:
                                         assert(!hitsFloorOrCeil);
-                                        assert(inOutObj->floorToEye-imgY == imgY+inOutObj->floorToEye);
-                                        imgY += inOutObj->floorToEye;
-                                        break;
-                                    //
+                                        break; // Nothing to do.
                                     case HitType_ceil:
                                         assert(hitsFloorOrCeil);
-                                        imgY += inOutObj->floorToEye;
+                                        imgY += opposite;
                                         break;
                                     case HitType_floor:
                                         assert(hitsFloorOrCeil);
-                                        imgY = inOutObj->floorToEye-imgY;
+                                        imgY -= opposite;
                                         break;
 
                                     default:
