@@ -183,7 +183,68 @@ bool Mt3d_pos_leftOrRight(struct Mt3d * const inOutObj, bool inLeft)
     return posStep(inOutObj, CALC_ANGLE_TO_POS(inOutObj->gamma+(inLeft?1.0:-1.0)*M_PI_2));
 }
 
-static inline void fillPixel_floor(struct Mt3d const * const inObj, enum CellType const inCellType, double const inDx, double const inDy, int const inY, uint8_t * const inOutPix)
+static inline void fillPixel_block(
+    struct Mt3d const * const inObj,
+    enum CellType const inCellType,
+    double const inCountLen,
+    bool const inNextX,
+    double const inLastX,
+    double const inKlastY,
+    int const inAddX,
+    int const inAddY,
+    int const inPos,
+    uint8_t * const inOutPix)
+{
+    double imgX = inNextX?CALC_CARTESIAN_Y(inKlastY, (double)inObj->map->height):inLastX, // (Cartesian Y to cell Y coordinate conversion, if necessary)
+        imgY = inObj->ceilingToEye; // Correct value, if ray does not hit anything / is a straight line.
+
+    imgX -= (double)((int)imgX); // Removes integer part.
+    if((inNextX && inAddX!=1)||(!inNextX && inAddY!=1))
+    {
+        imgX = 1.0-imgX;
+    }
+#ifndef NDEBUG
+    if(!(imgX>=0.0 && imgX<1.0))
+    {
+        Deb_line("imgX = %f", imgX);
+    }
+#endif //NDEBUG
+    assert(imgX>=0.0 && imgX<1.0); // MT_TODO: TEST: Happens sometimes with rotation!
+
+    switch(inObj->hitType[inPos])
+    {
+        case HitType_none:
+            break; // Nothing to do.
+        case HitType_ceil:
+            imgY -= inCountLen*inObj->ceilingToEye/inObj->e[inPos];
+            break;
+        case HitType_floor:
+            imgY += inCountLen*inObj->floorToEye/inObj->e[inPos];
+            break;
+
+        default:
+            assert(false);
+            break;
+    }
+#ifndef NDEBUG
+    if(!(imgY>=0.0 && imgY<1.0))
+    {
+        Deb_line("imgY = %f", imgY);
+    }
+#endif //NDEBUG
+    assert(imgY>=0.0 && imgY<1.0); // MT_TODO: TEST: Happens sometimes with rotation!
+
+    int const row = (int)((double)inObj->bmp[inCellType]->d.h*imgY),
+        col = (int)((double)inObj->bmp[inCellType]->d.h*imgX);
+
+    unsigned char const * const channelZeroPtr = inObj->bmp[inCellType]->p+3*inObj->bmp[inCellType]->d.w*row+3*col;
+
+    inOutPix[0] = channelZeroPtr[0];
+    inOutPix[1] = channelZeroPtr[1];
+    inOutPix[2] = channelZeroPtr[2];
+}
+
+static inline void fillPixel_floor(struct Mt3d const * const inObj, enum CellType const inCellType, double const inDx, double const inDy, uint8_t * const inOutPix)
 {
     double const imgX = inDx-(double)((int)inDx), // Removes integer part.
         imgY = inDy-(double)((int)inDy); // Removes integer part.
@@ -207,26 +268,6 @@ static inline void fillPixel_floor(struct Mt3d const * const inObj, enum CellTyp
                 inOutPix[1] = ~inOutPix[1];
                 inOutPix[2] = ~inOutPix[2];
             }
-            break;
-
-        default:
-            assert(false);
-            break;
-    }
-}
-
-static inline void fillPixel(struct Mt3d const * const inObj, enum CellType const inCellType, double const inDx, double const inDy, int const inY, uint8_t * const inOutPix)
-{
-    switch(inCellType)
-    {
-        case CellType_block_default:
-            inOutPix[2] = 0xFF;
-            inOutPix[1] = 0;
-            inOutPix[0] = 0;
-            break;
-        case CellType_floor_default: // (falls through)
-        case CellType_floor_exit:
-            fillPixel_floor(inObj, inCellType, inDx, inDy, inY, inOutPix);
             break;
 
         default:
@@ -350,7 +391,7 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                 assert(hitsFloorOrCeil);
 
                 countLen = inOutObj->e[pos];
-                fillPixel(inOutObj, (enum CellType)inOutObj->map->cells[cellY*inOutObj->map->width+cellX], dX, dY, y, colPix);
+                fillPixel_floor(inOutObj, (enum CellType)inOutObj->map->cells[cellY*inOutObj->map->width+cellX], dX, dY, colPix);
             }
             else
             {
@@ -434,58 +475,17 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                                 countLen *= inOutObj->e[pos]/inOutObj->d[pos]; // Equivalent to e.
                             }
 
-                            {
-                                double imgX = nextX?CALC_CARTESIAN_Y(kLastY, mapHeight):lastX, // (Cartesian Y to cell Y coordinate conversion, if necessary)
-                                    imgY = inOutObj->ceilingToEye; // Correct value, if ray does not hit anything / is a straight line.
-
-                                imgX -= (double)((int)imgX); // Removes integer part.
-                                if((nextX && addX!=1)||(!nextX && addY!=1))
-                                {
-                                    imgX = 1.0-imgX;
-                                }
-#ifndef NDEBUG
-                                if(!(imgX>=0.0 && imgX<1.0))
-                                {
-                                    Deb_line("imgX = %f", imgX);
-                                }
-#endif //NDEBUG
-                                assert(imgX>=0.0 && imgX<1.0); // MT_TODO: TEST: Happens sometimes with rotation!
-
-                                switch(inOutObj->hitType[pos])
-                                {
-                                    case HitType_none:
-                                        break; // Nothing to do.
-                                    case HitType_ceil:
-                                        imgY -= countLen*inOutObj->ceilingToEye/inOutObj->e[pos];
-                                        break;
-                                    case HitType_floor:
-                                        imgY += countLen*inOutObj->floorToEye/inOutObj->e[pos];
-                                        break;
-
-                                    default:
-                                        assert(false);
-                                        break;
-                                }
-#ifndef NDEBUG
-                                if(!(imgY>=0.0 && imgY<1.0))
-                                {
-                                    Deb_line("imgY = %f", imgY);
-                                }
-#endif //NDEBUG
-                                assert(imgY>=0.0 && imgY<1.0); // MT_TODO: TEST: Happens sometimes with rotation!
-
-                                {
-                                    int const row = (int)((double)inOutObj->bmp[cellType]->d.h*imgY),
-                                        col = (int)((double)inOutObj->bmp[cellType]->d.h*imgX);
-
-                                    unsigned char const * const channelZeroPtr = inOutObj->bmp[cellType]->p+3*inOutObj->bmp[cellType]->d.w*row+3*col;
-
-                                    colPix[0] = channelZeroPtr[0];
-                                    colPix[1] = channelZeroPtr[1];
-                                    colPix[2] = channelZeroPtr[2];
-                                }
-                            }
-
+                            fillPixel_block(
+                                inOutObj,
+                                cellType,
+                                countLen,
+                                nextX,
+                                lastX,
+                                kLastY,
+                                addX,
+                                addY,
+                                pos,
+                                colPix);
                             break;
                         }
 
@@ -496,7 +496,7 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                                 assert(hitsFloorOrCeil);
 
                                 countLen = inOutObj->e[pos];
-                                fillPixel(inOutObj, cellType, dX, dY, y, colPix);
+                                fillPixel_floor(inOutObj, cellType, dX, dY, colPix);
                             }
                             //
                             // Otherwise: Line/"ray" passes through current cell to the next.
