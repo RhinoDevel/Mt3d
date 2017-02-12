@@ -426,20 +426,15 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                     {
                         case CellType_block_default: // Line/"ray" hits block's surface.
                         {
-                            double const absDiffXy = fabs((kLastY-kPosY)/sinZeta);// Equals sqrt(diffY*diffY+diffX*diffX) with diffY = kLastY-kPosY and diffX = lastX-inOutObj->posX.
-
                             noHit = false;
 
-                            countLen = absDiffXy;
+                            countLen = fabs((kLastY-kPosY)/sinZeta); // Equivalent to d.
                             if(hitsFloorOrCeil)
                             {
-                                countLen *= inOutObj->e[pos]/inOutObj->d[pos]; // Because countLen was set to absDiffXy (in this case not correct) and [correct ]countLen/absDiffXy equals inOutObj->e[pos]/inOutObj->d[pos].
+                                countLen *= inOutObj->e[pos]/inOutObj->d[pos]; // Equivalent to e.
                             }
 
-                            //*** HIER WEITER: Use floorToEye and/or ceilingToEye instead of square root stuff! ***
-
                             {
-                                double const opposite = countLen-absDiffXy>0?sqrt(countLen*countLen-absDiffXy*absDiffXy):0; // Assuming less than 0 occurring for very small values only caused by rounding errors, where countLen and absDiffXy should be equal. See: http://stackoverflow.com/questions/4453372/sqrt1-0-pow1-0-2-returns-nan
                                 double imgX = nextX?CALC_CARTESIAN_Y(kLastY, mapHeight):lastX, // (Cartesian Y to cell Y coordinate conversion, if necessary)
                                     imgY = inOutObj->ceilingToEye; // Correct value, if ray does not hit anything / is a straight line.
 
@@ -459,22 +454,18 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                                 switch(inOutObj->hitType[pos])
                                 {
                                     case HitType_none:
-                                        assert(!hitsFloorOrCeil);
                                         break; // Nothing to do.
                                     case HitType_ceil:
-                                        assert(hitsFloorOrCeil);
-                                        imgY -= opposite;
+                                        imgY -= countLen*inOutObj->ceilingToEye/inOutObj->e[pos];
                                         break;
                                     case HitType_floor:
-                                        assert(hitsFloorOrCeil);
-                                        imgY += opposite;
+                                        imgY += countLen*inOutObj->floorToEye/inOutObj->e[pos];
                                         break;
 
                                     default:
                                         assert(false);
                                         break;
                                 }
-
 #ifndef NDEBUG
                                 if(!(imgY>=0.0 && imgY<1.0))
                                 {
