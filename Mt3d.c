@@ -365,12 +365,12 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
             }
             double const sinZeta = sin(zeta);
 
-            deltaX = cos(zeta); // With parameter v in rotation matrix
-            deltaY = sinZeta; // formulas set to 1.0 [see Calc_fillRotated()].
+            deltaX = cos(zeta); // With parameter v in rotation matrix..
+            deltaY = sinZeta; // ..formulas set to 1.0 [see Calc_fillRotated()].
             if(hitsFloorOrCeil)
             {
-                deltaX *= inOutObj->d[pos]; // Using distance as parameter
-                deltaY *= inOutObj->d[pos]; // v of rotation matrix formula.
+                deltaX *= inOutObj->d[pos]; // Using distance as parameter..
+                deltaY *= inOutObj->d[pos]; // ..v of rotation matrix formula.
 
                 // Get coordinates of cell where the line/"ray" reaches either floor or ceiling:
                 //
@@ -397,24 +397,19 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
             {
                 int const addX = CALC_SIGN_FROM_DOUBLE(deltaX),
                     addY = CALC_SIGN_FROM_DOUBLE(deltaY);
+                double const m = deltaY/deltaX, // Slope
+                    b = kPosY-m*inOutObj->posX, // Y-intercept
+                    tanZeta = tan(zeta),
+                    hitXstep = (double)addY/**1.0*//tanZeta, // 1.0 is cell length.
+                    hitYstep = (double)addX/**1.0*/*tanZeta; // 1.0 is cell length.
 
                 bool noHit = true;
                 int xForHit = cellX+(int)(addX>0),
                     yForHit = (int)kPosY+(int)(addY>0); // (Cartesian Y coordinate)
-
-                // Values to represent line in Slope-intercept form:
-                //
-                double const m = deltaY/deltaX, // Slope
-                    b = kPosY-m*inOutObj->posX; // Y-intercept
-
                 double lastX = inOutObj->posX, // Store last reached coordinates for
                     kLastY = kPosY,            // brightness (and other) calculations.
                     hitX = ((double)yForHit-b)/m,
                     hitY = m*(double)xForHit+b;
-
-                double const tanZeta = tan(zeta),
-                    hitXstep = (double)addY/**1.0*//tanZeta, // 1.0 is cell length.
-                    hitYstep = (double)addX/**1.0*/*tanZeta; // 1.0 is cell length.
 
                 do
                 {
@@ -445,8 +440,8 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                     {
                         // Update last reached coordinates:
                         //
-                        lastX = dblXForHit;
                         kLastY = hitY;
+                        lastX = dblXForHit;
 
                         cellX += addX;
                         xForHit += addX;
