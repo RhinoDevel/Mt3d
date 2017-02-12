@@ -322,9 +322,10 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
 
                 zeta = CALC_ANGLE_TO_POS(zetaUnchecked);
             }
+            double const sinZeta = sin(zeta);
 
             deltaX = cos(zeta); // With parameter v in rotation matrix
-            deltaY = sin(zeta); // formulas set to 1.0 [see Calc_fillRotated()].
+            deltaY = sinZeta; // formulas set to 1.0 [see Calc_fillRotated()].
             if(hitsFloorOrCeil)
             {
                 deltaX *= inOutObj->d[pos]; // Using distance as parameter
@@ -425,22 +426,20 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                     {
                         case CellType_block_default: // Line/"ray" hits block's surface.
                         {
-                            double const diffY = kLastY-kPosY,
-                                diffX = lastX-inOutObj->posX,
-                                diffXY = sqrt(diffY*diffY+diffX*diffX);
+                            double const absDiffXy = fabs((kLastY-kPosY)/sinZeta);// Equals sqrt(diffY*diffY+diffX*diffX) with diffY = kLastY-kPosY and diffX = lastX-inOutObj->posX.
 
                             noHit = false;
 
-                            countLen = diffXY;
+                            countLen = absDiffXy;
                             if(hitsFloorOrCeil)
                             {
-                                countLen *= inOutObj->e[pos]/inOutObj->d[pos]; // Because countLen was set to diffXY (in this case not correct) and [correct ]countLen/diffXY equals inOutObj->e[pos]/inOutObj->d[pos].
+                                countLen *= inOutObj->e[pos]/inOutObj->d[pos]; // Because countLen was set to absDiffXy (in this case not correct) and [correct ]countLen/absDiffXy equals inOutObj->e[pos]/inOutObj->d[pos].
                             }
 
                             //*** HIER WEITER: Use floorToEye and/or ceilingToEye instead of square root stuff! ***
 
                             {
-                                double const opposite = countLen-diffXY>0?sqrt(countLen*countLen-diffXY*diffXY):0; // Assuming less than 0 occurring for very small values only caused by rounding errors, where countLen and diffXY should be equal. See: http://stackoverflow.com/questions/4453372/sqrt1-0-pow1-0-2-returns-nan
+                                double const opposite = countLen-absDiffXy>0?sqrt(countLen*countLen-absDiffXy*absDiffXy):0; // Assuming less than 0 occurring for very small values only caused by rounding errors, where countLen and absDiffXy should be equal. See: http://stackoverflow.com/questions/4453372/sqrt1-0-pow1-0-2-returns-nan
                                 double imgX = nextX?CALC_CARTESIAN_Y(kLastY, mapHeight):lastX, // (Cartesian Y to cell Y coordinate conversion, if necessary)
                                     imgY = opposite;
 
