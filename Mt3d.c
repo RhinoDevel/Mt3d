@@ -386,7 +386,7 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
 
             uint8_t * const colPix = (uint8_t*)(rowPix+x);
 
-            if((cellX==dCellX)&&(cellY==dCellY)) // Line/"ray" hits floor or ceiling in current/player's cell.
+            if(cellX==dCellX && cellY==dCellY) // Line/"ray" hits floor or ceiling in current/player's cell.
             {
                 assert(hitsFloorOrCeil);
 
