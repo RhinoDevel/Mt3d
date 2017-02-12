@@ -441,16 +441,20 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                             {
                                 double const opposite = countLen-absDiffXy>0?sqrt(countLen*countLen-absDiffXy*absDiffXy):0; // Assuming less than 0 occurring for very small values only caused by rounding errors, where countLen and absDiffXy should be equal. See: http://stackoverflow.com/questions/4453372/sqrt1-0-pow1-0-2-returns-nan
                                 double imgX = nextX?CALC_CARTESIAN_Y(kLastY, mapHeight):lastX, // (Cartesian Y to cell Y coordinate conversion, if necessary)
-                                    imgY = inOutObj->floorToEye; // Correct value, if ray does not hit anything / is a straight line.
+                                    imgY = inOutObj->ceilingToEye; // Correct value, if ray does not hit anything / is a straight line.
 
                                 imgX -= (double)((int)imgX); // Removes integer part.
-
                                 if((nextX && addX!=1)||(!nextX && addY!=1))
                                 {
                                     imgX = 1.0-imgX;
                                 }
-
-                                assert(imgX>=0.0 && imgX<1.0); // MT_TODO: TEST: Happens sometimes (with rotation)!
+#ifndef NDEBUG
+                                if(!(imgX>=0.0 && imgX<1.0))
+                                {
+                                    Deb_line("imgX = %f", imgX);
+                                }
+#endif //NDEBUG
+                                assert(imgX>=0.0 && imgX<1.0); // MT_TODO: TEST: Happens sometimes with rotation!
 
                                 switch(inOutObj->hitType[pos])
                                 {
@@ -459,11 +463,11 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                                         break; // Nothing to do.
                                     case HitType_ceil:
                                         assert(hitsFloorOrCeil);
-                                        imgY += opposite;
+                                        imgY -= opposite;
                                         break;
                                     case HitType_floor:
                                         assert(hitsFloorOrCeil);
-                                        imgY -= opposite;
+                                        imgY += opposite;
                                         break;
 
                                     default:
@@ -471,8 +475,13 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                                         break;
                                 }
 
-                                imgY = CEILING_HEIGHT-imgY;
-                                assert(imgY>=0.0 && imgY<1.0);
+#ifndef NDEBUG
+                                if(!(imgY>=0.0 && imgY<1.0))
+                                {
+                                    Deb_line("imgY = %f", imgY);
+                                }
+#endif //NDEBUG
+                                assert(imgY>=0.0 && imgY<1.0); // MT_TODO: TEST: Happens sometimes with rotation!
 
                                 {
                                     int const row = (int)((double)inOutObj->bmp[cellType]->d.h*imgY),
