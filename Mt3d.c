@@ -183,6 +183,21 @@ bool Mt3d_pos_leftOrRight(struct Mt3d * const inOutObj, bool inLeft)
     return posStep(inOutObj, CALC_ANGLE_TO_POS(inOutObj->gamma+(inLeft?1.0:-1.0)*M_PI_2));
 }
 
+static inline void fillPixel(struct Bmp * const inBitmaps[CellType_COUNT], int const inBmpIndex, double const inImgX, double const inImgY, uint8_t * const inOutPix)
+{
+    assert(inImgX>=0.0 && inImgX<1.0);
+    assert(inImgY>=0.0 && inImgY<1.0);
+
+    struct Bmp const * const bmp = inBitmaps[inBmpIndex];
+    int const row = (int)((double)bmp->d.h*inImgY), // Truncates
+        col = (int)((double)bmp->d.h*inImgX); // Truncates
+    unsigned char const * const channelZeroPtr = bmp->p+3*bmp->d.w*row+3*col;
+
+    inOutPix[0] = channelZeroPtr[0];
+    inOutPix[1] = channelZeroPtr[1];
+    inOutPix[2] = channelZeroPtr[2];
+}
+
 static inline void fillPixel_block(
     struct Mt3d const * const inObj,
     enum CellType const inCellType,
@@ -234,28 +249,17 @@ static inline void fillPixel_block(
 #endif //NDEBUG
     assert(imgY>=0.0 && imgY<1.0); // MT_TODO: TEST: Happens sometimes with rotation!
 
-    int const row = (int)((double)inObj->bmp[inCellType]->d.h*imgY),
-        col = (int)((double)inObj->bmp[inCellType]->d.h*imgX);
-
-    unsigned char const * const channelZeroPtr = inObj->bmp[inCellType]->p+3*inObj->bmp[inCellType]->d.w*row+3*col;
-
-    inOutPix[0] = channelZeroPtr[0];
-    inOutPix[1] = channelZeroPtr[1];
-    inOutPix[2] = channelZeroPtr[2];
+    fillPixel(inObj->bmp, (int)inCellType, imgX, imgY, inOutPix);
 }
 
 static inline void fillPixel_floor(struct Mt3d const * const inObj, enum CellType const inCellType, double const inDx, double const inDy, uint8_t * const inOutPix)
 {
-    double const imgX = inDx-(double)((int)inDx), // Removes integer part.
-        imgY = inDy-(double)((int)inDy); // Removes integer part.
-    int const row = (int)((double)inObj->bmp[inCellType]->d.h*imgY),
-        col = (int)((double)inObj->bmp[inCellType]->d.h*imgX);
-
-    unsigned char const * const channelZeroPtr = inObj->bmp[inCellType]->p+3*inObj->bmp[inCellType]->d.w*row+3*col;
-
-    inOutPix[0] = channelZeroPtr[0];
-    inOutPix[1] = channelZeroPtr[1];
-    inOutPix[2] = channelZeroPtr[2];
+    fillPixel(
+        inObj->bmp,
+        (int)inCellType,
+        inDx-(double)((int)inDx), // Removes integer part.
+        inDy-(double)((int)inDy), // Removes integer part.
+        inOutPix);
 
     switch(inCellType)
     {
@@ -342,31 +346,22 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
 
         for(int x = 0;x<inOutObj->constants.res.w;++x)
         {
-            double deltaX = -1.0,
-                deltaY = -1.0,
+            int const pos = rowByWidth+x;
+            uint8_t * const colPix = (uint8_t*)(rowPix+x);
+            bool const hitsFloorOrCeil = inOutObj->hitType[pos]!=HitType_none;
+            double const zetaUnchecked = inOutObj->eta[pos]+inOutObj->gamma, // (might be out of expected range, but no problem - see usage below)
+                sinZeta = sin(zetaUnchecked);
+
+            double deltaX = cos(zetaUnchecked), // With parameter v in both rotation matrix..
+                deltaY = sinZeta,               // ..formulas set to 1.0 [see Calc_fillRotated()].
                 countLen = -1.0, // Means unset.
                 dX = -1.0,
-                dY = -1.0,
-                zeta = -1.0;
+                dY = -1.0;
             int cellX = truncPosX,
                 cellY = truncPosY,
                 dCellX = -1,
                 dCellY = -1;
 
-            int const pos = rowByWidth+x;
-            bool const hitsFloorOrCeil = inOutObj->hitType[pos]!=HitType_none;
-
-            // If hitsFloorOrCeil is NOT true, given object's d and e properties are invalid!
-
-            {
-                double const zetaUnchecked = inOutObj->eta[pos]+inOutObj->gamma; // (might be out of expected range, see usage below)
-
-                zeta = CALC_ANGLE_TO_POS(zetaUnchecked);
-            }
-            double const sinZeta = sin(zeta);
-
-            deltaX = cos(zeta); // With parameter v in rotation matrix..
-            deltaY = sinZeta; // ..formulas set to 1.0 [see Calc_fillRotated()].
             if(hitsFloorOrCeil)
             {
                 deltaX *= inOutObj->d[pos]; // Using distance as parameter..
@@ -384,12 +379,9 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
 
             assert(deltaX!=0.0); // Implement special case!
 
-            uint8_t * const colPix = (uint8_t*)(rowPix+x);
-
             if(cellX==dCellX && cellY==dCellY) // Line/"ray" hits floor or ceiling in current/player's cell.
             {
                 assert(hitsFloorOrCeil);
-
                 countLen = inOutObj->e[pos];
                 fillPixel_floor(inOutObj, (enum CellType)inOutObj->map->cells[cellY*inOutObj->map->width+cellX], dX, dY, colPix);
             }
@@ -397,11 +389,10 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
             {
                 int const addX = CALC_SIGN_FROM_DOUBLE(deltaX),
                     addY = CALC_SIGN_FROM_DOUBLE(deltaY);
-                double const m = deltaY/deltaX, // Slope
+                double const m = deltaY/deltaX, // Slope. This equals tan(zeta).
                     b = kPosY-m*inOutObj->posX, // Y-intercept
-                    tanZeta = tan(zeta),
-                    hitXstep = (double)addY/**1.0*//tanZeta, // 1.0 is cell length.
-                    hitYstep = (double)addX/**1.0*/*tanZeta; // 1.0 is cell length.
+                    hitXstep = (double)addY/**1.0*//m, // 1.0 is cell length.
+                    hitYstep = (double)addX/**1.0*/*m; // 1.0 is cell length.
 
                 bool noHit = true;
                 int xForHit = cellX+(int)(addX>0),
@@ -415,10 +406,6 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                 {
                     double const dblYForHit = (double)yForHit,
                         dblXForHit = (double)xForHit;
-
-                    //hitX = (dblYForHit-b)/m,
-                    //hitY = m*dblXForHit+b;
-
                     bool const nextY = ( addX==1 && (int)hitX<xForHit ) || ( addX!=1 && hitX>=dblXForHit ),
                         nextX = ( addY==1 && (int)hitY<yForHit ) || ( addY!=1 && hitY>=dblYForHit );
 
@@ -426,61 +413,38 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
 
                     if(nextY)
                     {
-                        // Update last reached coordinates:
-                        //
-                        lastX = hitX;
-                        kLastY = dblYForHit;
-
+                        lastX = hitX; // Update last..
+                        kLastY = dblYForHit; // ..reached coordinates.
                         cellY -= addY;
+                        assert(cellY>=0 && cellY<inOutObj->map->height);
                         yForHit += addY;
-
                         hitX += hitXstep;
                     }
                     if(nextX)
                     {
-                        // Update last reached coordinates:
-                        //
-                        kLastY = hitY;
-                        lastX = dblXForHit;
-
+                        kLastY = hitY; // Update last..
+                        lastX = dblXForHit; // ..reached coordinates.
                         cellX += addX;
+                        assert(cellX>=0 && cellX<inOutObj->map->width);
                         xForHit += addX;
-
                         hitY += hitYstep;
                     }
-
-                    assert(cellX>=0 && cellX<inOutObj->map->width);
-                    assert(cellY>=0 && cellY<inOutObj->map->height);
+                    noHit = cellX!=dCellX || cellY!=dCellY; // noHit = false => Last cell is reached, where line/"ray" (at least theoretically) hits either floor or ceiling.
+                    assert(noHit||hitsFloorOrCeil);
 
                     enum CellType const cellType = (enum CellType)inOutObj->map->cells[cellY*inOutObj->map->width+cellX];
-
-                    noHit = cellX!=dCellX || cellY!=dCellY; // noHit = false => Last cell is reached, where line/"ray" (at least theoretically) hits either floor or ceiling.
-
-                    assert(noHit || hitsFloorOrCeil);
 
                     switch(cellType)
                     {
                         case CellType_block_default: // Line/"ray" hits block's surface.
                         {
                             noHit = false;
-
-                            countLen = fabs((kLastY-kPosY)/sinZeta); // Equivalent to d.
+                            countLen = fabs((kLastY-kPosY)/sinZeta); // Equivalent (not equal!) to d.
                             if(hitsFloorOrCeil)
                             {
-                                countLen *= inOutObj->e[pos]/inOutObj->d[pos]; // Equivalent to e.
+                                countLen *= inOutObj->e[pos]/inOutObj->d[pos]; // Equivalent (not equal!) to e.
                             }
-
-                            fillPixel_block(
-                                inOutObj,
-                                cellType,
-                                countLen,
-                                nextX,
-                                lastX,
-                                kLastY,
-                                addX,
-                                addY,
-                                pos,
-                                colPix);
+                            fillPixel_block(inOutObj, cellType, countLen, nextX, lastX, kLastY, addX, addY, pos, colPix);
                             break;
                         }
 
@@ -489,13 +453,9 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                             if(!noHit) // Line/"ray" hits floor or ceiling.
                             {
                                 assert(hitsFloorOrCeil);
-
                                 countLen = inOutObj->e[pos];
                                 fillPixel_floor(inOutObj, cellType, dX, dY, colPix);
-                            }
-                            //
-                            // Otherwise: Line/"ray" passes through current cell to the next.
-
+                            } // Otherwise: Line/"ray" passes through current cell to the next.
                             break;
 
                         default:
