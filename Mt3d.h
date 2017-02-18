@@ -18,6 +18,20 @@
 extern "C" {
 #endif
 
+/*
+
+alpha
+beta
+gamma
+delta
+epsilon
+zeta
+eta
+theta
+iota
+
+*/
+
 struct Mt3d
 {
     // ************
@@ -44,8 +58,7 @@ struct Mt3d
 
     double floorToEye; // (in cell lengths)
     double ceilingToEye; // (in cell lengths)
-    double * const d; // One d value for each (x,y) pixel coordinate (in cell lengths).
-    double * const e; // One e value for each (x,y) pixel coordinate (in cell lengths).
+    double * const iota; // One angle (radian) for each (x,y) pixel coordinate. Angle is between "d" (adjacent) and "e" (hypotenuse).
     enum HitType * const hitType; // e reaches floor, ceiling, or none.
     double * const eta; // One value for each (x/y) pixel coordinate (in radian).
 
