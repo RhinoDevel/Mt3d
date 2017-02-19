@@ -348,7 +348,6 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                 countLen = -1.0, // Means unset.
                 dX = -1.0,
                 dY = -1.0,
-                d = -1.0, // Infinite (correct for HitType_none).
                 e = -1.0; // Infinite (correct for HitType_none).
             int cellX = truncPosX,
                 cellY = truncPosY,
@@ -370,10 +369,11 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                     assert(false);
                     break;
             }
-            d = e*cos(inOutObj->iota[pos]);
 
             if(hitsFloorOrCeil)
             {
+                double const d = e*cos(inOutObj->iota[pos]);
+
                 // Get coordinates of cell where the line/"ray" reaches either floor or ceiling:
                 //
                 dX = d*deltaX+inOutObj->posX; // Using distance as parameter v of rotation matrix formula by multiplying deltaX with d.
@@ -449,7 +449,7 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                             countLen = fabs((kLastY-kPosY)/sinZeta); // Equivalent (not equal!) to d.
                             if(hitsFloorOrCeil)
                             {
-                                countLen *= e/d; // Equivalent (not equal!) to e.
+                                countLen *= 1.0/cos(inOutObj->iota[pos]); // Equivalent (not equal!) to e.
                             }
                             fillPixel_block(inOutObj, cellType, countLen, nextX, lastX, kLastY, addX, addY, pos, colPix);
                             break;
