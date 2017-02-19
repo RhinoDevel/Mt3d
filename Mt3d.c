@@ -200,7 +200,6 @@ static inline void fillPixel_block(
     int const inAddX,
     int const inAddY,
     int const inPos,
-    double const inE,
     uint8_t * const inOutPix)
 {
     double imgX = inNextX?CALC_CARTESIAN_Y(inKlastY, (double)inObj->map->height):inLastX, // (Cartesian Y to cell Y coordinate conversion, if necessary)
@@ -224,10 +223,10 @@ static inline void fillPixel_block(
         case HitType_none:
             break; // Nothing to do.
         case HitType_ceil:
-            imgY -= inCountLen*inObj->ceilingToEye/inE;
+            imgY -= inCountLen*sin(inObj->iota[inPos]);
             break;
         case HitType_floor:
-            imgY += inCountLen*inObj->floorToEye/inE;
+            imgY += inCountLen*sin(inObj->iota[inPos]);
             break;
 
         default:
@@ -455,7 +454,7 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                             {
                                 countLen *= e/d; // Equivalent (not equal!) to e.
                             }
-                            fillPixel_block(inOutObj, cellType, countLen, nextX, lastX, kLastY, addX, addY, pos, e, colPix);
+                            fillPixel_block(inOutObj, cellType, countLen, nextX, lastX, kLastY, addX, addY, pos, colPix);
                             break;
                         }
 
