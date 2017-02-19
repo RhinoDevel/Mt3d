@@ -374,13 +374,10 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
 
             if(hitsFloorOrCeil)
             {
-                deltaX *= d; // Using distance as parameter..
-                deltaY *= d; // ..v of rotation matrix formula.
-
                 // Get coordinates of cell where the line/"ray" reaches either floor or ceiling:
                 //
-                dX = deltaX+inOutObj->posX;
-                dY = CALC_CARTESIAN_Y(deltaY+kPosY, mapHeight); // Cartesian Y to cell Y coordinate conversion.
+                dX = d*deltaX+inOutObj->posX; // Using distance as parameter v of rotation matrix formula by multiplying deltaX with d.
+                dY = CALC_CARTESIAN_Y(d*deltaY+kPosY, mapHeight); // Cartesian Y to cell Y coordinate conversion. // Using distance as parameter v of rotation matrix formula by multiplying deltaY with d.
                 dCellX = (int)dX;
                 dCellY = (int)dY;
             }
