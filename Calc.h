@@ -24,7 +24,7 @@ static double const Calc_PiMul1_5 = 1.5*M_PI; // 270 degree in radian.
 
 #define CALC_TO_RAD(x) (((x)*M_PI)/180.0) // Converts degree to radian.
 #define CALC_TO_DEG(x) (((x)*180.0)/M_PI) // Converts radian to degree.
-#define CALC_ANGLE_TO_POS(x) ((x)<0.0?Calc_PiMul2+(x):(x)>=Calc_PiMul2?(x)-Calc_PiMul2:(x)) // Given angle, or positive equivalent, if negative angle given.
+#define CALC_ANGLE_TO_POS(x) ((x)<0.0?Calc_PiMul2+(x):(x)>=Calc_PiMul2?(x)-Calc_PiMul2:(x)) // Converts given angle to be between 0 and 2xPI.
 
 #define CALC_SIGN_FROM_DOUBLE(x) ((int)(0.0<(x))-(int)((x)<0.0))
 #define CALC_DOUBLE_TO_INT_ROUND(x) ((int)((x)+0.5*(double)CALC_SIGN_FROM_DOUBLE(x)))
