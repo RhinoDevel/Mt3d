@@ -323,12 +323,13 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
             int const pos = rowByWidth+x;
             uint8_t * const colPix = (uint8_t*)(rowPix+x);
             bool const hitsFloorOrCeil = inOutObj->hitType[pos]!=HitType_none;
-            double const zetaUnchecked = inOutObj->eta[pos]+inOutObj->gamma, // (might be out of expected range, but no problem - see usage below)
-                sinZeta = sin(zetaUnchecked),
+            double const distanceToEye = inOutObj->hitType[pos]==HitType_ceil?inOutObj->ceilingToEye:inOutObj->floorToEye, // Does not matter, if !hitsFloorOrCeil.
+                zetaUnchecked = inOutObj->eta[pos]+inOutObj->gamma, // (might be out of expected range, but no problem - see usage below)
                 deltaX = cos(zetaUnchecked), // With parameter v in both rotation matrix..
-                deltaY = sinZeta;            // ..formulas set to 1.0 [see Calc_fillRotated()].
+                deltaY = sin(zetaUnchecked); // ..formulas set to 1.0 [see Calc_fillRotated()].
             
             assert(deltaX!=0.0); // Implement special case!
+            assert(deltaY!=0.0); // Implement special case!
             
             int const addX = CALC_SIGN_FROM_DOUBLE(deltaX),
                 addY = CALC_SIGN_FROM_DOUBLE(deltaY);
@@ -360,47 +361,23 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
 
                 if(hitsFloorOrCeil)
                 {
-                    bool hit = false;
-                    double cellHypotenuse = 0.0, // Top view. This value's sign may not be correct (does not matter - see usage below).
-                        cellIotaOpposite = 0.0; // Side view.
+                    double hypotenuse = 0.0; // Top view. This value's sign may not be correct (does not matter - see usage below).
 
                     if(nextX)
                     {
-                        cellHypotenuse = (dblXForHit-inOutObj->posX)/deltaX; // deltaX equals cos(zeta).
+                        hypotenuse = (dblXForHit-inOutObj->posX)/deltaX; // deltaX equals cos(zeta).
                     }
                     else
                     {
                         assert(nextY);
-                        cellHypotenuse = (dblYForHit-kPosY)/sinZeta;
+                        hypotenuse = (dblYForHit-kPosY)/deltaY;
                     }
-                    cellIotaOpposite = tan(inOutObj->iota[pos])*fabs(cellHypotenuse);
-                    if(inOutObj->hitType[pos]==HitType_ceil)
+                    
+                    double const iotaOpposite = tan(inOutObj->iota[pos])*fabs(hypotenuse); // Side view.
+                    
+                    if(iotaOpposite>distanceToEye)
                     {
-                        if(cellIotaOpposite > inOutObj->ceilingToEye)
-                        {
-                            hit = true;
-                        }
-                    }
-                    else
-                    {
-                        assert(inOutObj->hitType[pos]==HitType_floor);
-                        if(cellIotaOpposite > inOutObj->floorToEye)
-                        {
-                            hit = true;
-                        }
-                    }
-
-                    if(hit)
-                    {
-                        if(inOutObj->hitType[pos]==HitType_ceil)
-                        {
-                            countLen = inOutObj->ceilingToEye/sin(inOutObj->iota[pos]);
-                        }
-                        else
-                        {
-                            assert(inOutObj->hitType[pos]==HitType_floor);
-                            countLen = inOutObj->floorToEye/sin(inOutObj->iota[pos]);
-                        }
+                        countLen = distanceToEye/sin(inOutObj->iota[pos]);
 
                         double const d = countLen*cos(inOutObj->iota[pos]),
                             dX = d*deltaX+inOutObj->posX, // Using distance as parameter v of rotation matrix formula by multiplying deltaX with d.
@@ -435,7 +412,7 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
 
                 if(cellType==CellType_block_default) // Line/"ray" hits block's surface.
                 {
-                    countLen = fabs((kLastY-kPosY)/sinZeta); // Equivalent (not equal!) to d.
+                    countLen = fabs((kLastY-kPosY)/deltaY); // Equivalent (not equal!) to d.
                     if(hitsFloorOrCeil)
                     {
                         countLen *= 1.0/cos(inOutObj->iota[pos]); // Equivalent (not equal!) to e.
