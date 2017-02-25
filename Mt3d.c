@@ -386,13 +386,6 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
 
             assert(deltaX!=0.0); // Implement special case!
 
-            if(cellX==dCellX && cellY==dCellY) // Line/"ray" hits floor or ceiling in current/player's cell.
-            {
-                assert(hitsFloorOrCeil);
-                countLen = e;
-                fillPixel_floor(inOutObj, (enum CellType)inOutObj->map->cells[cellY*inOutObj->map->width+cellX], dX, dY, colPix);
-            }
-            else
             {
                 int const addX = CALC_SIGN_FROM_DOUBLE(deltaX),
                     addY = CALC_SIGN_FROM_DOUBLE(deltaY);
@@ -401,75 +394,126 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                     hitXstep = (double)addY/**1.0*//m, // 1.0 is cell length.
                     hitYstep = (double)addX/**1.0*/*m; // 1.0 is cell length.
 
-                bool noHit = true;
                 int xForHit = cellX+(int)(addX>0),
                     yForHit = (int)kPosY+(int)(addY>0); // (Cartesian Y coordinate)
                 double lastX = inOutObj->posX, // Store last reached coordinates for
                     kLastY = kPosY,            // brightness (and other) calculations.
                     hitX = ((double)yForHit-b)/m,
-                    hitY = m*(double)xForHit+b;
+                    hitY = m*(double)xForHit+b,
+                    dblYForHit = (double)yForHit,
+                    dblXForHit = (double)xForHit;
+                 bool noHit = true,
+                    nextY = ( addX==1 && (int)hitX<xForHit ) || ( addX!=1 && hitX>=dblXForHit ),
+                    nextX = ( addY==1 && (int)hitY<yForHit ) || ( addY!=1 && hitY>=dblYForHit );
+                 
+                assert(nextX||nextY);
+                
+                if(hitsFloorOrCeil)
+                { // Check, if line/"ray" hits floor or ceiling INSIDE or current/player's cell:
+                    double cellHypotenuse = 0.0, // Top view. This value's sign may not be correct (does not matter - see usage below).
+                        cellIotaOpposite = 0.0; // Side view.
 
-                do
-                {
-                    double const dblYForHit = (double)yForHit,
-                        dblXForHit = (double)xForHit;
-                    bool const nextY = ( addX==1 && (int)hitX<xForHit ) || ( addX!=1 && hitX>=dblXForHit ),
-                        nextX = ( addY==1 && (int)hitY<yForHit ) || ( addY!=1 && hitY>=dblYForHit );
-
-                    assert(nextY||nextX);
-
-                    if(nextY)
-                    {
-                        lastX = hitX; // Update last..
-                        kLastY = dblYForHit; // ..reached coordinates.
-                        cellY -= addY;
-                        assert(cellY>=0 && cellY<inOutObj->map->height);
-                        yForHit += addY;
-                        hitX += hitXstep;
-                    }
                     if(nextX)
                     {
-                        kLastY = hitY; // Update last..
-                        lastX = dblXForHit; // ..reached coordinates.
-                        cellX += addX;
-                        assert(cellX>=0 && cellX<inOutObj->map->width);
-                        xForHit += addX;
-                        hitY += hitYstep;
+                        cellHypotenuse = (dblXForHit-inOutObj->posX)/deltaX; // deltaX equals cos(zeta).
                     }
-                    noHit = cellX!=dCellX || cellY!=dCellY; // noHit = false => Last cell is reached, where line/"ray" (at least theoretically) hits either floor or ceiling.
-                    assert(noHit||hitsFloorOrCeil);
-
-                    enum CellType const cellType = (enum CellType)inOutObj->map->cells[cellY*inOutObj->map->width+cellX];
-
-                    switch(cellType)
+                    else
                     {
-                        case CellType_block_default: // Line/"ray" hits block's surface.
-                        {
-                            noHit = false;
-                            countLen = fabs((kLastY-kPosY)/sinZeta); // Equivalent (not equal!) to d.
-                            if(hitsFloorOrCeil)
-                            {
-                                countLen *= 1.0/cos(inOutObj->iota[pos]); // Equivalent (not equal!) to e.
-                            }
-                            fillPixel_block(inOutObj, cellType, countLen, nextX, lastX, kLastY, addX, addY, pos, colPix);
-                            break;
-                        }
-
-                        case CellType_floor_default: // (falls through).
-                        case CellType_floor_exit:
-                            if(!noHit) // Line/"ray" hits floor or ceiling.
-                            {
-                                assert(hitsFloorOrCeil);
-                                countLen = e;
-                                fillPixel_floor(inOutObj, cellType, dX, dY, colPix);
-                            } // Otherwise: Line/"ray" passes through current cell to the next.
-                            break;
-
-                        default:
-                            assert(false);
-                            break;
+                        assert(nextY);
+                        cellHypotenuse = (dblYForHit-kPosY)/sinZeta;
                     }
-                }while(noHit);
+                    cellIotaOpposite = tan(inOutObj->iota[pos])*fabs(cellHypotenuse);
+                    if(inOutObj->hitType[pos]==HitType_ceil)
+                    {
+                        if(cellIotaOpposite > inOutObj->ceilingToEye)
+                        {
+                            countLen = inOutObj->ceilingToEye/sin(inOutObj->iota[pos]);   
+                            fillPixel_floor(inOutObj, (enum CellType)inOutObj->map->cells[cellY*inOutObj->map->width+cellX], dX, dY, colPix);
+                        }
+                    }
+                    else
+                    {
+                        assert(inOutObj->hitType[pos]==HitType_floor);
+                        if(cellIotaOpposite > inOutObj->floorToEye)
+                        {
+                            countLen = inOutObj->floorToEye/sin(inOutObj->iota[pos]);
+                            fillPixel_floor(inOutObj, (enum CellType)inOutObj->map->cells[cellY*inOutObj->map->width+cellX], dX, dY, colPix);
+                        }
+                    }
+                }
+
+                if(countLen==-1.0)
+                { // Line/"ray" does not hit floor or ceiling of current/player's cell.
+                    do
+                    {
+                        dblYForHit = (double)yForHit;
+                        dblXForHit = (double)xForHit;
+                        nextY = ( addX==1 && (int)hitX<xForHit ) || ( addX!=1 && hitX>=dblXForHit );
+                        nextX = ( addY==1 && (int)hitY<yForHit ) || ( addY!=1 && hitY>=dblYForHit );
+
+                        assert(nextX||nextY);
+
+                        if(nextY)
+                        {
+                            lastX = hitX; // Update last..
+                            kLastY = dblYForHit; // ..reached coordinates.
+                            cellY -= addY;
+                            assert(cellY>=0 && cellY<inOutObj->map->height);
+                            yForHit += addY;
+                            hitX += hitXstep;
+                        }
+                        if(nextX)
+                        {
+                            kLastY = hitY; // Update last..
+                            lastX = dblXForHit; // ..reached coordinates.
+                            cellX += addX;
+                            assert(cellX>=0 && cellX<inOutObj->map->width);
+                            xForHit += addX;
+                            hitY += hitYstep;
+                        }
+                        noHit = cellX!=dCellX || cellY!=dCellY; // noHit = false => Last cell is reached, where line/"ray" (at least theoretically) hits either floor or ceiling.
+                        assert(noHit||hitsFloorOrCeil);
+
+                        enum CellType const cellType = (enum CellType)inOutObj->map->cells[cellY*inOutObj->map->width+cellX];
+
+                        switch(cellType)
+                        {
+                            case CellType_block_default: // Line/"ray" hits block's surface.
+                            {
+                                noHit = false;
+                                countLen = fabs((kLastY-kPosY)/sinZeta); // Equivalent (not equal!) to d.
+                                if(hitsFloorOrCeil)
+                                {
+                                    countLen *= 1.0/cos(inOutObj->iota[pos]); // Equivalent (not equal!) to e.
+                                }
+                                fillPixel_block(inOutObj, cellType, countLen, nextX, lastX, kLastY, addX, addY, pos, colPix);
+                                break;
+                            }
+
+                            case CellType_floor_default: // (falls through).
+                            case CellType_floor_exit:
+                                if(!noHit) // Line/"ray" hits floor or ceiling.
+                                {
+                                    assert(hitsFloorOrCeil);
+                                    if(inOutObj->hitType[pos]==HitType_ceil)
+                                    {
+                                        countLen = inOutObj->ceilingToEye/sin(inOutObj->iota[pos]);
+                                    }
+                                    else
+                                    {
+                                        assert(inOutObj->hitType[pos]==HitType_floor);
+                                        countLen = inOutObj->floorToEye/sin(inOutObj->iota[pos]);
+                                    }
+                                    fillPixel_floor(inOutObj, cellType, dX, dY, colPix);
+                                } // Otherwise: Line/"ray" passes through current cell to the next.
+                                break;
+
+                            default:
+                                assert(false);
+                                break;
+                        }
+                    }while(noHit);
+                }
             }
             setBrightness(countLen, inOutObj->map->maxVisible, inOutObj->map->maxDarkness, colPix);
         }
