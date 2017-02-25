@@ -272,23 +272,6 @@ static inline void fillPixel_floor(struct Mt3d const * const inObj, enum CellTyp
     }
 }
 
-/** Set brightness based on map constants and line length from player.
- */
-static inline void setBrightness(double const inCountLen, double const inMaxVisible, double const inMaxDarkness, unsigned char inOutPix[3])
-{
-    assert(inCountLen!=-1.0);
-
-    double const brightness = (inMaxVisible-fmin(inCountLen, inMaxVisible))/inMaxVisible; // inCountLen 0 = 1.0, inCountLen maxVisible = 0.0;
-    int const sub = (int)((inMaxDarkness*255.0)*(1.0-brightness)+0.5), // Rounds
-        r = (int)inOutPix[2]-sub,
-        g = (int)inOutPix[1]-sub,
-        b = (int)inOutPix[0]-sub;
-
-    inOutPix[2] = r>0?(unsigned char)r:0;
-    inOutPix[1] = g>0?(unsigned char)g:0;
-    inOutPix[0] = b>0?(unsigned char)b:0;
-}
-
 void Mt3d_update(struct Mt3d * const inOutObj)
 {
     ++inOutObj->updateCount;
@@ -341,75 +324,43 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
             uint8_t * const colPix = (uint8_t*)(rowPix+x);
             bool const hitsFloorOrCeil = inOutObj->hitType[pos]!=HitType_none;
             double const zetaUnchecked = inOutObj->eta[pos]+inOutObj->gamma, // (might be out of expected range, but no problem - see usage below)
-                sinZeta = sin(zetaUnchecked);
-
-            double deltaX = cos(zetaUnchecked), // With parameter v in both rotation matrix..
-                deltaY = sinZeta,               // ..formulas set to 1.0 [see Calc_fillRotated()].
-                countLen = -1.0, // Means unset.
-                dX = -1.0,
-                dY = -1.0,
-                e = -1.0; // Infinite (correct for HitType_none).
+                sinZeta = sin(zetaUnchecked),
+                deltaX = cos(zetaUnchecked), // With parameter v in both rotation matrix..
+                deltaY = sinZeta;            // ..formulas set to 1.0 [see Calc_fillRotated()].
+            
+            assert(deltaX!=0.0); // Implement special case!
+            
+            int const addX = CALC_SIGN_FROM_DOUBLE(deltaX),
+                addY = CALC_SIGN_FROM_DOUBLE(deltaY);
+            double const m = deltaY/deltaX, // Slope. This equals tan(zeta).
+                b = kPosY-m*inOutObj->posX, // Y-intercept
+                hitXstep = (double)addY/**1.0*//m, // 1.0 is cell length.
+                hitYstep = (double)addX/**1.0*/*m; // 1.0 is cell length.
+            
+            double countLen = -1.0; // Means unset.
             int cellX = truncPosX,
                 cellY = truncPosY,
-                dCellX = -1,
-                dCellY = -1;
+                xForHit = cellX+(int)(addX>0),
+                yForHit = (int)kPosY+(int)(addY>0); // (Cartesian Y coordinate)
+            double lastX = inOutObj->posX, // Store last reached coordinates for
+                kLastY = kPosY,            // brightness (and other) calculations.
+                hitX = ((double)yForHit-b)/m,
+                hitY = m*(double)xForHit+b;
+            enum CellType cellType = (enum CellType)inOutObj->map->cells[cellY*inOutObj->map->width+cellX];
 
-            switch(inOutObj->hitType[pos])
+            do
             {
-                case HitType_none:
-                    break; // (already set above)
-                case HitType_ceil:
-                    e = inOutObj->ceilingToEye/sin(inOutObj->iota[pos]);
-                    break;
-                case HitType_floor:
-                    e = inOutObj->floorToEye/sin(inOutObj->iota[pos]);
-                    break;
-
-                default:
-                    assert(false);
-                    break;
-            }
-
-            if(hitsFloorOrCeil)
-            {
-                double const d = e*cos(inOutObj->iota[pos]);
-
-                // Get coordinates of cell where the line/"ray" reaches either floor or ceiling:
-                //
-                dX = d*deltaX+inOutObj->posX; // Using distance as parameter v of rotation matrix formula by multiplying deltaX with d.
-                dY = CALC_CARTESIAN_Y(d*deltaY+kPosY, mapHeight); // Cartesian Y to cell Y coordinate conversion. // Using distance as parameter v of rotation matrix formula by multiplying deltaY with d.
-                dCellX = (int)dX;
-                dCellY = (int)dY;
-            }
-            //
-            // Otherwise: dX, dY, dCellX and dCellY are invalid!
-
-            assert(deltaX!=0.0); // Implement special case!
-
-            {
-                int const addX = CALC_SIGN_FROM_DOUBLE(deltaX),
-                    addY = CALC_SIGN_FROM_DOUBLE(deltaY);
-                double const m = deltaY/deltaX, // Slope. This equals tan(zeta).
-                    b = kPosY-m*inOutObj->posX, // Y-intercept
-                    hitXstep = (double)addY/**1.0*//m, // 1.0 is cell length.
-                    hitYstep = (double)addX/**1.0*/*m; // 1.0 is cell length.
-
-                int xForHit = cellX+(int)(addX>0),
-                    yForHit = (int)kPosY+(int)(addY>0); // (Cartesian Y coordinate)
-                double lastX = inOutObj->posX, // Store last reached coordinates for
-                    kLastY = kPosY,            // brightness (and other) calculations.
-                    hitX = ((double)yForHit-b)/m,
-                    hitY = m*(double)xForHit+b,
-                    dblYForHit = (double)yForHit,
+                double const dblYForHit = (double)yForHit,
                     dblXForHit = (double)xForHit;
-                 bool noHit = true,
-                    nextY = ( addX==1 && (int)hitX<xForHit ) || ( addX!=1 && hitX>=dblXForHit ),
+                bool const nextY = ( addX==1 && (int)hitX<xForHit ) || ( addX!=1 && hitX>=dblXForHit ),
                     nextX = ( addY==1 && (int)hitY<yForHit ) || ( addY!=1 && hitY>=dblYForHit );
-                 
+
+                assert(cellType!=CellType_block_default);
                 assert(nextX||nextY);
-                
+
                 if(hitsFloorOrCeil)
-                { // Check, if line/"ray" hits floor or ceiling INSIDE or current/player's cell:
+                {
+                    bool hit = false;
                     double cellHypotenuse = 0.0, // Top view. This value's sign may not be correct (does not matter - see usage below).
                         cellIotaOpposite = 0.0; // Side view.
 
@@ -427,8 +378,7 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                     {
                         if(cellIotaOpposite > inOutObj->ceilingToEye)
                         {
-                            countLen = inOutObj->ceilingToEye/sin(inOutObj->iota[pos]);   
-                            fillPixel_floor(inOutObj, (enum CellType)inOutObj->map->cells[cellY*inOutObj->map->width+cellX], dX, dY, colPix);
+                            hit = true;
                         }
                     }
                     else
@@ -436,86 +386,79 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                         assert(inOutObj->hitType[pos]==HitType_floor);
                         if(cellIotaOpposite > inOutObj->floorToEye)
                         {
-                            countLen = inOutObj->floorToEye/sin(inOutObj->iota[pos]);
-                            fillPixel_floor(inOutObj, (enum CellType)inOutObj->map->cells[cellY*inOutObj->map->width+cellX], dX, dY, colPix);
+                            hit = true;
                         }
+                    }
+
+                    if(hit)
+                    {
+                        if(inOutObj->hitType[pos]==HitType_ceil)
+                        {
+                            countLen = inOutObj->ceilingToEye/sin(inOutObj->iota[pos]);
+                        }
+                        else
+                        {
+                            assert(inOutObj->hitType[pos]==HitType_floor);
+                            countLen = inOutObj->floorToEye/sin(inOutObj->iota[pos]);
+                        }
+
+                        double const d = countLen*cos(inOutObj->iota[pos]),
+                            dX = d*deltaX+inOutObj->posX, // Using distance as parameter v of rotation matrix formula by multiplying deltaX with d.
+                            dY = CALC_CARTESIAN_Y(d*deltaY+kPosY, mapHeight); // Cartesian Y to cell Y coordinate conversion. // Using distance as parameter v of rotation matrix formula by multiplying deltaY with d.
+
+                        fillPixel_floor(inOutObj, cellType, dX, dY, colPix);
+                        break;
                     }
                 }
 
-                if(countLen==-1.0)
-                { // Line/"ray" does not hit floor or ceiling of current/player's cell.
-                    do
-                    {
-                        dblYForHit = (double)yForHit;
-                        dblXForHit = (double)xForHit;
-                        nextY = ( addX==1 && (int)hitX<xForHit ) || ( addX!=1 && hitX>=dblXForHit );
-                        nextX = ( addY==1 && (int)hitY<yForHit ) || ( addY!=1 && hitY>=dblYForHit );
+                assert(nextX||nextY);
 
-                        assert(nextX||nextY);
-
-                        if(nextY)
-                        {
-                            lastX = hitX; // Update last..
-                            kLastY = dblYForHit; // ..reached coordinates.
-                            cellY -= addY;
-                            assert(cellY>=0 && cellY<inOutObj->map->height);
-                            yForHit += addY;
-                            hitX += hitXstep;
-                        }
-                        if(nextX)
-                        {
-                            kLastY = hitY; // Update last..
-                            lastX = dblXForHit; // ..reached coordinates.
-                            cellX += addX;
-                            assert(cellX>=0 && cellX<inOutObj->map->width);
-                            xForHit += addX;
-                            hitY += hitYstep;
-                        }
-                        noHit = cellX!=dCellX || cellY!=dCellY; // noHit = false => Last cell is reached, where line/"ray" (at least theoretically) hits either floor or ceiling.
-                        assert(noHit||hitsFloorOrCeil);
-
-                        enum CellType const cellType = (enum CellType)inOutObj->map->cells[cellY*inOutObj->map->width+cellX];
-
-                        switch(cellType)
-                        {
-                            case CellType_block_default: // Line/"ray" hits block's surface.
-                            {
-                                noHit = false;
-                                countLen = fabs((kLastY-kPosY)/sinZeta); // Equivalent (not equal!) to d.
-                                if(hitsFloorOrCeil)
-                                {
-                                    countLen *= 1.0/cos(inOutObj->iota[pos]); // Equivalent (not equal!) to e.
-                                }
-                                fillPixel_block(inOutObj, cellType, countLen, nextX, lastX, kLastY, addX, addY, pos, colPix);
-                                break;
-                            }
-
-                            case CellType_floor_default: // (falls through).
-                            case CellType_floor_exit:
-                                if(!noHit) // Line/"ray" hits floor or ceiling.
-                                {
-                                    assert(hitsFloorOrCeil);
-                                    if(inOutObj->hitType[pos]==HitType_ceil)
-                                    {
-                                        countLen = inOutObj->ceilingToEye/sin(inOutObj->iota[pos]);
-                                    }
-                                    else
-                                    {
-                                        assert(inOutObj->hitType[pos]==HitType_floor);
-                                        countLen = inOutObj->floorToEye/sin(inOutObj->iota[pos]);
-                                    }
-                                    fillPixel_floor(inOutObj, cellType, dX, dY, colPix);
-                                } // Otherwise: Line/"ray" passes through current cell to the next.
-                                break;
-
-                            default:
-                                assert(false);
-                                break;
-                        }
-                    }while(noHit);
+                if(nextY)
+                {
+                    lastX = hitX; // Update last..
+                    kLastY = dblYForHit; // ..reached coordinates.
+                    cellY -= addY;
+                    assert(cellY>=0 && cellY<inOutObj->map->height);
+                    yForHit += addY;
+                    hitX += hitXstep;
                 }
-            }
-            setBrightness(countLen, inOutObj->map->maxVisible, inOutObj->map->maxDarkness, colPix);
+                if(nextX)
+                {
+                    kLastY = hitY; // Update last..
+                    lastX = dblXForHit; // ..reached coordinates.
+                    cellX += addX;
+                    assert(cellX>=0 && cellX<inOutObj->map->width);
+                    xForHit += addX;
+                    hitY += hitYstep;
+                }
+                cellType = (enum CellType)inOutObj->map->cells[cellY*inOutObj->map->width+cellX];
+
+                if(cellType==CellType_block_default) // Line/"ray" hits block's surface.
+                {
+                    countLen = fabs((kLastY-kPosY)/sinZeta); // Equivalent (not equal!) to d.
+                    if(hitsFloorOrCeil)
+                    {
+                        countLen *= 1.0/cos(inOutObj->iota[pos]); // Equivalent (not equal!) to e.
+                    }
+                    fillPixel_block(inOutObj, cellType, countLen, nextX, lastX, kLastY, addX, addY, pos, colPix);
+                    break;
+                }
+            }while(true);
+            assert(countLen>=0.0);
+
+            // ***********************
+            // *** Set brightness: ***
+            // ***********************
+            
+            double const brightness = (inOutObj->map->maxVisible-fmin(countLen, inOutObj->map->maxVisible))/inOutObj->map->maxVisible; // countLen 0 = 1.0, countLen maxVisible = 0.0;
+            int const sub = (int)((inOutObj->map->maxDarkness*255.0)*(1.0-brightness)+0.5), // Rounds
+                red = (int)colPix[2]-sub,
+                green = (int)colPix[1]-sub,
+                blue = (int)colPix[0]-sub;
+
+            colPix[2] = red>0?(unsigned char)red:0;
+            colPix[1] = green>0?(unsigned char)green:0;
+            colPix[0] = blue>0?(unsigned char)blue:0;
         }
     }
 }
