@@ -243,6 +243,7 @@ static inline void fillPixel_block(
             assert(false);
             break;
     }
+    imgY -= (double)(int)imgY; // Only valid for cell width being 1.0!
 #ifndef NDEBUG
     if(!(imgY>=0.0 && imgY<1.0))
     {
@@ -289,6 +290,7 @@ static void draw(void * inOutArg)
     
     double const mapHeight = (double)inOutObj->map->height,
         kPosY = CALC_CARTESIAN_Y(inOutObj->posY, mapHeight);
+    
     for(int y = input->firstRow;y<=input->lastRow;++y)
     {
         int const truncPosX = (int)inOutObj->posX,
