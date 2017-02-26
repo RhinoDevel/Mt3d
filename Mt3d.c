@@ -5,6 +5,9 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <math.h>
+#ifndef __STDC_NO_THREADS__
+    #include <threads.h>
+#endif //__STDC_NO_THREADS__d
 
 #include "Deb.h"
 #include "Mt3d.h"
@@ -15,6 +18,13 @@
 static double const CEILING_HEIGHT = 1.0; // 1.0 = Height equals length of one floor/ceiling cell.
 static double const PLAYER_STEP_LEN = 0.2; // Cell lengths.
 static double const PLAYER_ANG_STEP = CALC_TO_RAD(5.0);
+
+struct DrawInput
+{
+    struct Mt3d * o;
+    int firstRow;
+    int lastRow;
+};
 
 /** Return current second of game time.
  */
@@ -272,46 +282,14 @@ static inline void fillPixel_floor(struct Mt3d const * const inObj, enum CellTyp
     }
 }
 
-void Mt3d_update(struct Mt3d * const inOutObj)
+static void draw(void * inOutArg)
 {
-    ++inOutObj->updateCount;
-}
-
-void Mt3d_draw(struct Mt3d * const inOutObj)
-{
-    // Cell coordinates     Cartesian coordinates
-    //
-    //  00000000001          00000000001
-    //  01234567890          01234567890
-    // 0XXXXXXXXXXX         8
-    // 1X.........X         7
-    // 2X.........X         6
-    // 3X...E.....X         5
-    // 4X.........X         4
-    // 5X...p.X...X         3
-    // 6X.........X         2
-    // 7X.........X         1
-    // 8XXXXXXXXXXX         0
-    //
-    // => yCartesian = heightCell-1-yCell
-    // => yCell      = heightCell-1-yCartesian
-
-    if(inOutObj->doFill) // <=> Invalid.
-    {
-        inOutObj->doFill = false;
-        fill(
-            &inOutObj->constants,
-            &inOutObj->variables,
-            inOutObj->iota,
-            inOutObj->eta,
-            inOutObj->hitType,
-            &inOutObj->floorToEye,
-            &inOutObj->ceilingToEye);
-    }
-
+    struct DrawInput const * const input = (struct DrawInput const *)inOutArg;
+    struct Mt3d * const inOutObj = input->o;
+    
     double const mapHeight = (double)inOutObj->map->height,
         kPosY = CALC_CARTESIAN_Y(inOutObj->posY, mapHeight);
-    for(int y = 0;y<inOutObj->constants.res.h;++y)
+    for(int y = input->firstRow;y<=input->lastRow;++y)
     {
         int const truncPosX = (int)inOutObj->posX,
             truncPosY = (int)inOutObj->posY,
@@ -323,8 +301,7 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
             int const pos = rowByWidth+x;
             uint8_t * const colPix = (uint8_t*)(rowPix+x);
             bool const hitsFloorOrCeil = inOutObj->hitType[pos]!=HitType_none;
-            double const distanceToEye = inOutObj->hitType[pos]==HitType_ceil?inOutObj->ceilingToEye:inOutObj->floorToEye, // Does not matter, if !hitsFloorOrCeil.
-                zetaUnchecked = inOutObj->eta[pos]+inOutObj->gamma, // (might be out of expected range, but no problem - see usage below)
+            double const zetaUnchecked = inOutObj->eta[pos]+inOutObj->gamma, // (might be out of expected range, but no problem - see usage below)
                 deltaX = cos(zetaUnchecked), // With parameter v in both rotation matrix..
                 deltaY = sin(zetaUnchecked); // ..formulas set to 1.0 [see Calc_fillRotated()].
             
@@ -374,6 +351,28 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
                     }
                     
                     double const iotaOpposite = tan(inOutObj->iota[pos])*fabs(hypotenuse); // Side view.
+                     
+                    double distanceToEye = inOutObj->hitType[pos]==HitType_ceil?inOutObj->ceilingToEye:inOutObj->floorToEye; // Does not matter, if !hitsFloorOrCeil.
+
+//                    if(cellX==24 && cellY==3)
+//                    {
+//                        distanceToEye = inOutObj->hitType[pos]==HitType_ceil?0.3:0.2;
+//                        
+//                        if(iotaOpposite>distanceToEye)
+//                        {
+//                            countLen = distanceToEye/sin(inOutObj->iota[pos]);
+//
+//                            double const d = countLen*cos(inOutObj->iota[pos]),
+//                                dX = d*deltaX+inOutObj->posX, // Using distance as parameter v of rotation matrix formula by multiplying deltaX with d.
+//                                dY = CALC_CARTESIAN_Y(d*deltaY+kPosY, mapHeight); // Cartesian Y to cell Y coordinate conversion. // Using distance as parameter v of rotation matrix formula by multiplying deltaY with d.
+//
+//                            //fillPixel_floor(inOutObj, cellType, dX, dY, colPix);
+//                            colPix[2] = 0;
+//                            colPix[1] = 0;
+//                            colPix[0] = 0xFF;
+//                            break;
+//                        }
+//                    }
                     
                     if(iotaOpposite>distanceToEye)
                     {
@@ -438,6 +437,80 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
             colPix[0] = blue>0?(unsigned char)blue:0;
         }
     }
+}
+
+void Mt3d_update(struct Mt3d * const inOutObj)
+{
+    ++inOutObj->updateCount;
+}
+
+void Mt3d_draw(struct Mt3d * const inOutObj)
+{
+    // Cell coordinates     Cartesian coordinates
+    //
+    //  00000000001          00000000001
+    //  01234567890          01234567890
+    // 0XXXXXXXXXXX         8
+    // 1X.........X         7
+    // 2X.........X         6
+    // 3X...E.....X         5
+    // 4X.........X         4
+    // 5X...p.X...X         3
+    // 6X.........X         2
+    // 7X.........X         1
+    // 8XXXXXXXXXXX         0
+    //
+    // => yCartesian = heightCell-1-yCell
+    // => yCell      = heightCell-1-yCartesian
+
+    if(inOutObj->doFill) // <=> Invalid.
+    {
+        inOutObj->doFill = false;
+        fill(
+            &inOutObj->constants,
+            &inOutObj->variables,
+            inOutObj->iota,
+            inOutObj->eta,
+            inOutObj->hitType,
+            &inOutObj->floorToEye,
+            &inOutObj->ceilingToEye);
+    }
+
+#ifdef __STDC_NO_THREADS__
+    {
+        struct DrawInput input = {
+            .o = inOutObj,
+            .firstRow = 0,
+            .lastRow = inOutObj->constants.res.h-1
+        };
+
+        draw(&input);
+    }
+#else //__STDC_NO_THREADS__
+    {
+        assert(false); // MT_TODO: TEST: Set .firstRow & .lastRow values correctly, below and make sure that thread count makes sense!
+        
+        thrd_t threadId[4];
+        int i = 0;
+        struct DrawInput input[4];
+
+        for(i = 0;i<4;++i)
+        {   
+            input[i] = {
+                .o = inOutObj,
+                .firstRow = 0,
+                .lastRow = inOutObj->constants.res.h-1
+            };
+            
+            thrd_create(threadId+i, threadFunction, input+i);
+        }
+
+        for(int i = 0;i<4;++i)
+        {
+            thrd_join(threadId[i], NULL);
+        }
+    }
+#endif //__STDC_NO_THREADS__
 }
 
 void Mt3d_delete(struct Mt3d * const inObj)
