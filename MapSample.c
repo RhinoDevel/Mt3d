@@ -30,13 +30,20 @@ static void fillCells(struct Map * const inOutMap)
         {
 //            if(col==20&&row==1)
 //            {
-//                rowPtr[col].floor = 0.25;
+//                rowPtr[col].floor = 0.5;
 //                rowPtr[col].height = 0.5;
 //                rowPtr[col].type = CellType_floor_default;
 //                continue;
 //            }
+//            if(col==18&&row==1)
+//            {
+//                rowPtr[col].floor = 0.0;
+//                rowPtr[col].height = 1.5;
+//                rowPtr[col].type = CellType_floor_default;
+//                continue;
+//            }
             
-            rowPtr[col].floor = 0.0;
+            rowPtr[col].floor = 0.25;
             rowPtr[col].height = 1.0;
             
             if((col==0)||(col==(WIDTH-1))||(row==0)||(row==(HEIGHT-1)))

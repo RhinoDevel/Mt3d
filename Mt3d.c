@@ -329,6 +329,9 @@ static void draw(void * inOut)
                     dblXForHit = (double)xForHit;
                 bool const nextY = ( addX==1 && (int)hitX<xForHit ) || ( addX!=1 && hitX>=dblXForHit ),
                     nextX = ( addY==1 && (int)hitY<yForHit ) || ( addY!=1 && hitY>=dblYForHit );
+                
+                double hEyeToExit = 0.0, // Side view: To hold horizontal distance from player's eye to where line/"ray" leaves the current cell.
+                    vEyeToExit = 0.0;
 
                 assert(cell->type!=CellType_block_default);
                 assert(nextX||nextY);
@@ -338,8 +341,7 @@ static void draw(void * inOut)
                 //
                 if(hitsFloorOrCeil)
                 {
-                    double hEyeToExit = 0.0, // Side view: To hold horizontal distance from player's eye to where line/"ray" leaves the current cell.
-                        vEyeToFloorOrCeil = 0.0; // Side view: To hold vertical distance from player's eye to current cell's floor or ceiling.
+                    double vEyeToFloorOrCeil = 0.0; // Side view: To hold vertical distance from player's eye to current cell's floor or ceiling.
                     
                     // Using top view to calculate this (where hEyeToExit is a hypotenuse):
                     //
@@ -367,7 +369,7 @@ static void draw(void * inOut)
                     // Side view: Vertical distance from eye to where the line/"ray" is at current cell's border
                     //            (it may be above, below or at floor/ceiling):
                     //
-                    double const vEyeToExit = tan(input->o->iota[pos])*hEyeToExit;
+                    vEyeToExit = tan(input->o->iota[pos])*hEyeToExit;
                     
                     assert(vEyeToExit>0.0);
                     
@@ -389,8 +391,9 @@ static void draw(void * inOut)
                     } // Otherwise: Line/"ray" travels to next cell.
                 }
 
-                assert(nextX||nextY);
-
+                // As current cell is not a block and floor/ceiling was not hit by line/"ray",
+                // advance to next cell reached by line/"ray":
+                //
                 if(nextY)
                 {
                     lastX = hitX; // Update last..
@@ -401,7 +404,7 @@ static void draw(void * inOut)
                     hitX += hitXstep;
                 }
                 if(nextX)
-                {
+                { // (OK, if nextY is also true)
                     kLastY = hitY; // Update last..
                     lastX = dblXForHit; // ..reached coordinates.
                     cellX += addX;
@@ -413,11 +416,15 @@ static void draw(void * inOut)
 
                 if(cell->type==CellType_block_default) // Line/"ray" hits block's surface.
                 {
-                    countLen = fabs((kLastY-kPosY)/deltaY); // Equivalent (not equal!) to d.
                     if(hitsFloorOrCeil)
                     {
-                        countLen *= 1.0/cos(input->o->iota[pos]); // Equivalent (not equal!) to e.
+                        countLen = hEyeToExit;
                     }
+                    else
+                    {
+                        countLen = fabs((kLastY-kPosY)/deltaY);
+                    }
+
                     fillPixel_block(
                         input->o,
                         cell->type,
@@ -431,6 +438,38 @@ static void draw(void * inOut)
                         pos,
                         colPix);
                     break;
+                }
+                
+                if(hitsFloorOrCeil)
+                {
+                    double buf = 0.0; // This "is" vEyeToFloorOrCeil.
+                    
+                    if(input->o->hitType[pos]==HitType_ceil)
+                    {
+                        buf = cell->floor+cell->height-fullEyeHeight;
+                    }
+                    else
+                    {
+                        buf = fullEyeHeight-cell->floor;
+                    }
+                    if(buf<vEyeToExit)
+                    {
+                        countLen = hEyeToExit;
+
+                        fillPixel_block(
+                            input->o,
+                            cell->type,
+                            countLen,
+                            cell->floor+cell->height-(input->o->variables.playerEyeHeight-cell->floor),
+                            nextX,
+                            lastX,
+                            kLastY,
+                            addX,
+                            addY,
+                            pos,
+                            colPix);
+                        break;
+                    }
                 }
             }while(true);
             assert(countLen>=0.0);
