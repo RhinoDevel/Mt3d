@@ -286,11 +286,11 @@ static void draw(void * inOut)
     struct Cell const * const playerCell = input->o->map->cells+truncPosY*input->o->map->width+truncPosX;
     double const mapHeight = (double)input->o->map->height,
         kPosY = CALC_CARTESIAN_Y(input->o->posY, mapHeight),
-        absEyeHeight = playerCell->floor+input->o->variables.playerEyeHeight;
+        fullEyeHeight = playerCell->floor+input->o->variables.playerEyeHeight;
     
     for(int y = input->firstRow;y<=input->lastRow;++y)
     {
-        int rowByWidth = y*input->o->constants.res.w;
+        int const rowByWidth = y*input->o->constants.res.w;
         uint32_t * const rowPix = (uint32_t*)input->o->pixels+rowByWidth;
 
         for(int x = 0;x<input->o->constants.res.w;++x)
@@ -336,11 +336,11 @@ static void draw(void * inOut)
                 if(hitsFloorOrCeil)
                 {
                     double hypotenuse = 0.0, // Top view. This value's sign may not be correct (does not matter - see usage below).
-                        distanceToEye = absEyeHeight-cell->floor;
+                        distanceToEye = fullEyeHeight-cell->floor;
 
                     if(input->o->hitType[pos]==HitType_ceil)
                     {
-                        distanceToEye = cell->floor+cell->height-absEyeHeight;
+                        distanceToEye = cell->floor+cell->height-fullEyeHeight;
                     }
                     
                     if(nextX)
