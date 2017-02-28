@@ -335,30 +335,42 @@ static void draw(void * inOut)
                 
                 if(hitsFloorOrCeil)
                 {
-                    double hEyeToTarget = 0.0, // To hold horizontal distance from player's eye to current cell's floor or ceiling (sign may be incorrect).
-                        vEyeToTarget = fullEyeHeight-cell->floor; // Vertical distance from player's eye to current cell's floor.
-
-                    if(input->o->hitType[pos]==HitType_ceil)
-                    {
-                        vEyeToTarget = cell->floor+cell->height-fullEyeHeight; // Vertical offset from player's eye to current cell's ceiling.
-                    } // Otherwise: Already set.
+                    double hEyeToExit = 0.0, // Side view: To hold horizontal distance from player's eye to where line/"ray" leaves the current cell.
+                        vEyeToFloorOrCeil = 0.0; // Side view: To hold vertical distance from player's eye to current cell's floor or ceiling.
                     
+                    // Using top view to calculate this (where hEyeToExit is a hypotenuse):
+                    //
                     if(nextX)
                     {
-                        hEyeToTarget = (dblXForHit-input->o->posX)/deltaX; // deltaX equals cos(zeta).
+                        hEyeToExit = (dblXForHit-input->o->posX)/deltaX; // deltaX equals cos(zeta).
                     }
                     else
                     {
                         assert(nextY);
-                        hEyeToTarget = (dblYForHit-kPosY)/deltaY;
+                        hEyeToExit = (dblYForHit-kPosY)/deltaY;
                     }
+                    hEyeToExit = fabs(hEyeToExit);
                     
-                    double const iotaOpposite = tan(input->o->iota[pos])*fabs(hEyeToTarget), // Side view.
-                        absDistanceToEye = fabs(vEyeToTarget);
-                    
-                    if(iotaOpposite>absDistanceToEye)
+                    if(input->o->hitType[pos]==HitType_ceil)
                     {
-                        countLen = absDistanceToEye/sin(input->o->iota[pos]);
+                        vEyeToFloorOrCeil = cell->floor+cell->height-fullEyeHeight;
+                    }
+                    else
+                    {
+                        vEyeToFloorOrCeil = fullEyeHeight-cell->floor;
+                    }
+                    vEyeToFloorOrCeil = fabs(vEyeToFloorOrCeil);
+                    
+                    // Side view: Vertical distance from eye to where the line/"ray" is at current cell's border
+                    //            (it may be above, below or at floor/ceiling):
+                    //
+                    double const vEyeToExit = tan(input->o->iota[pos])*hEyeToExit;
+                    
+                    assert(vEyeToExit>0.0);
+                    
+                    if(vEyeToExit>=vEyeToFloorOrCeil)
+                    { // => Line/"ray" hits floor/ceiling of current cell.
+                        countLen = vEyeToFloorOrCeil/sin(input->o->iota[pos]);
 
 //                        colPix[2] = 0;
 //                        colPix[1] = 0;
@@ -371,7 +383,7 @@ static void draw(void * inOut)
                         
                         fillPixel_floor(input->o, cell->type, dX, dY, colPix);
                         break;
-                    }
+                    } // Otherwise: Line/"ray" travels to next cell.
                 }
 
                 assert(nextX||nextY);
