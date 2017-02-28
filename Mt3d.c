@@ -333,6 +333,9 @@ static void draw(void * inOut)
                 assert(cell->type!=CellType_block_default);
                 assert(nextX||nextY);
                 
+                // If this is not a straight horizontal line/"ray", check first,
+                // if current cell's floor/ceiling will be hit by it:
+                //
                 if(hitsFloorOrCeil)
                 {
                     double hEyeToExit = 0.0, // Side view: To hold horizontal distance from player's eye to where line/"ray" leaves the current cell.
