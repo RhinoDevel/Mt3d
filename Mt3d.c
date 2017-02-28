@@ -335,26 +335,26 @@ static void draw(void * inOut)
                 
                 if(hitsFloorOrCeil)
                 {
-                    double hypotenuse = 0.0, // Top view. This value's sign may not be correct (does not matter - see usage below).
-                        distanceToEye = fullEyeHeight-cell->floor;
+                    double hEyeToTarget = 0.0, // To hold horizontal distance from player's eye to current cell's floor or ceiling (sign may be incorrect).
+                        vEyeToTarget = fullEyeHeight-cell->floor; // Vertical distance from player's eye to current cell's floor.
 
                     if(input->o->hitType[pos]==HitType_ceil)
                     {
-                        distanceToEye = cell->floor+cell->height-fullEyeHeight;
-                    }
+                        vEyeToTarget = cell->floor+cell->height-fullEyeHeight; // Vertical offset from player's eye to current cell's ceiling.
+                    } // Otherwise: Already set.
                     
                     if(nextX)
                     {
-                        hypotenuse = (dblXForHit-input->o->posX)/deltaX; // deltaX equals cos(zeta).
+                        hEyeToTarget = (dblXForHit-input->o->posX)/deltaX; // deltaX equals cos(zeta).
                     }
                     else
                     {
                         assert(nextY);
-                        hypotenuse = (dblYForHit-kPosY)/deltaY;
+                        hEyeToTarget = (dblYForHit-kPosY)/deltaY;
                     }
                     
-                    double const iotaOpposite = tan(input->o->iota[pos])*fabs(hypotenuse), // Side view.
-                        absDistanceToEye = fabs(distanceToEye);
+                    double const iotaOpposite = tan(input->o->iota[pos])*fabs(hEyeToTarget), // Side view.
+                        absDistanceToEye = fabs(vEyeToTarget);
                     
                     if(iotaOpposite>absDistanceToEye)
                     {
