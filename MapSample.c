@@ -9,39 +9,54 @@
 #include "MapSample.h"
 #include "Calc.h"
 
-static int const WIDTH = 11;
-static int const HEIGHT = 9;
+static int const WIDTH = 32;
+static int const HEIGHT = 64;
 
-static double const POS_X = 4.123;
-static double const POS_Y = 5.321;
+static double const POS_X = 23.359270864847975;
+static double const POS_Y = 2.07568468132119;
 
-static double const GAMMA = CALC_TO_RAD(135.0);
+static double const GAMMA = CALC_TO_RAD(270.0);
 
-static double const MAX_VISIBLE = 7.0;
-static double const MAX_DARKNESS = 0.95;
+static double const MAX_VISIBLE = 32.0;
+static double const MAX_DARKNESS = 1.0;
 
 static void fillCells(struct Map * const inOutMap)
 {
-    unsigned char * const cells = (unsigned char *)(inOutMap->cells);
-    
     for(int row = 0, col = 0;row<HEIGHT;++row)
     {
-        unsigned char * const rowPtr = cells+row*WIDTH;
+        struct Cell * const rowPtr = inOutMap->cells+row*WIDTH;
         
         for(col = 0;col<WIDTH;++col)
         {
+//            if(col==20&&row==1)
+//            {
+//                rowPtr[col].floor = 0.25;
+//                rowPtr[col].height = 0.5;
+//                rowPtr[col].type = CellType_floor_default;
+//                continue;
+//            }
+            
+            rowPtr[col].floor = 0.0;
+            rowPtr[col].height = 1.0;
+            
             if((col==0)||(col==(WIDTH-1))||(row==0)||(row==(HEIGHT-1)))
             {
-                rowPtr[col] = CellType_block_default;
+                rowPtr[col].type = CellType_block_default;
             }
             else
             {
-                rowPtr[col] = CellType_floor_default;
+                if(col%4==0&&row%8==0)
+                {
+                    rowPtr[col].type = CellType_block_default;
+                }
+                else
+                {
+                    rowPtr[col].type = CellType_floor_default;
+                }
             }
         }
     }
-    
-    Map_set(inOutMap, HEIGHT/2+1, WIDTH/2+1, CellType_block_default);
+
     Map_set(inOutMap, HEIGHT/2-1, WIDTH/2-1, CellType_floor_exit);
 }
 
@@ -50,7 +65,7 @@ struct Map * MapSample_create()
     struct Map * const retVal = malloc(sizeof *retVal);
     assert(retVal!=NULL);
     
-    unsigned char * const cells = malloc(WIDTH*HEIGHT*sizeof *cells);
+    struct Cell * const cells = malloc(WIDTH*HEIGHT*sizeof *cells);
     assert(cells!=NULL);
     
     struct Map const buf = (struct Map)

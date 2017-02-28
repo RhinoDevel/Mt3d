@@ -17,10 +17,7 @@ static double const ALPHA_MIN = CALC_TO_RAD(20.0);
 static double const ALPHA_MAX = CALC_TO_RAD(160.0);
 static double const ALPHA_STEP = CALC_TO_RAD(5.0);
 static double const THETA_STEP = CALC_TO_RAD(5.0);
-static double const H = 0.4; // As part of room height (e.g. 0.5 = 50% of room height).
-static double const H_MIN = 0.1;
-static double const H_MAX = 0.9;
-static double const H_STEP = 0.1;
+static double const H_STEP = 0.1; // In cell lengths.
 
 static struct Mt3d * o = NULL;
 static struct Mt3dInput * input = NULL;
@@ -41,14 +38,16 @@ static bool pos_up()
 {
     assert(o!=NULL);
 
+    static double const H_MAX = 0.9;
+    
     double h = 0.0;
 
-    if(o->variables.h==H_MAX)
+    if(o->variables.playerEyeHeight==H_MAX)
     {
         return false;
     }
 
-    h = o->variables.h+H_STEP;
+    h = o->variables.playerEyeHeight+H_STEP;
     if(h>H_MAX)
     {
         h = H_MAX;
@@ -60,7 +59,7 @@ static bool pos_up()
             .alpha = o->variables.alpha,
             .beta = o->variables.beta,
             .theta = o->variables.theta,
-            .h = h
+            .playerEyeHeight = h
         };
         Mt3d_setVariables(&v, o);
     }
@@ -70,14 +69,16 @@ static bool pos_down()
 {
     assert(o!=NULL);
 
+    static double const H_MIN = 0.1;
+    
     double h = 0.0;
 
-    if(o->variables.h==H_MIN)
+    if(o->variables.playerEyeHeight==H_MIN)
     {
         return false;
     }
 
-    h = o->variables.h-H_STEP;
+    h = o->variables.playerEyeHeight-H_STEP;
     if(h<H_MIN)
     {
         h = H_MIN;
@@ -89,7 +90,7 @@ static bool pos_down()
             .alpha = o->variables.alpha,
             .beta = o->variables.beta,
             .theta = o->variables.theta,
-            .h = h
+            .playerEyeHeight = h
         };
         Mt3d_setVariables(&v, o);
     }
@@ -118,7 +119,7 @@ static bool fov_wider()
             .alpha = alpha,
             .beta = getBeta(alpha),
             .theta = o->variables.theta,
-            .h = o->variables.h
+            .playerEyeHeight = o->variables.playerEyeHeight
         };
         Mt3d_setVariables(&v, o);
     }
@@ -147,7 +148,7 @@ static bool fov_narrower()
             .alpha = alpha,
             .beta = getBeta(alpha),
             .theta = o->variables.theta,
-            .h = o->variables.h
+            .playerEyeHeight = o->variables.playerEyeHeight
         };
         Mt3d_setVariables(&v, o);
     }
@@ -171,7 +172,7 @@ static bool rot_z_ccw()
             .alpha = o->variables.alpha,
             .beta = o->variables.beta,
             .theta = theta,
-            .h = o->variables.h
+            .playerEyeHeight = o->variables.playerEyeHeight
         };
         Mt3d_setVariables(&v, o);
     }
@@ -195,7 +196,7 @@ static bool rot_z_cw()
             .alpha = o->variables.alpha,
             .beta = o->variables.beta,
             .theta = theta,
-            .h = o->variables.h
+            .playerEyeHeight = o->variables.playerEyeHeight
         };
         Mt3d_setVariables(&v, o);
     }
@@ -345,7 +346,7 @@ void Mt3dSingleton_init(int const inWidth, int const inHeight, int const inMsPer
         params->variables.alpha = ALPHA;
         params->variables.beta = getBeta(ALPHA);
         params->variables.theta = 0.0;
-        params->variables.h = H;
+        params->variables.playerEyeHeight = 0.4; // MT_TODO: TEST: This must be read from Map object to-be-created, below!
 
         o = Mt3d_create(params);
         free(params);

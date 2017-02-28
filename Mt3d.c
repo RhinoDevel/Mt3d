@@ -15,7 +15,6 @@
 #include "Calc.h"
 #include "Bmp.h"
 
-static double const CEILING_HEIGHT = 1.0; // 1.0 = Height equals length of one floor/ceiling cell.
 static double const PLAYER_STEP_LEN = 0.2; // Cell lengths.
 static double const PLAYER_ANG_STEP = CALC_TO_RAD(5.0);
 
@@ -38,9 +37,7 @@ static void fill(
     struct Mt3dVariables const * const inV,
     double * const inOutIota,
     double * const inOutEta,
-    enum HitType * const inOutHitType,
-    double * const inOutFloorToEye,
-    double * const inOutCeilingToEye)
+    enum HitType * const inOutHitType)
 {
     assert(inV->alpha>0.0 && inV->alpha<M_PI);
     assert(inV->beta>0.0 && inV->beta<M_PI);
@@ -58,9 +55,6 @@ static void fill(
         sYmiddle = xMiddle/sin(inV->alpha/2.0),
         sXmiddleSqr = sXmiddle*sXmiddle,
         sYmiddleSqr = sYmiddle*sYmiddle;
-
-    *inOutFloorToEye = inV->h*CEILING_HEIGHT; // (cell lengths)
-    *inOutCeilingToEye = CEILING_HEIGHT-*inOutFloorToEye; // (cell lengths)
 
     for(y = 0;y<inC->res.h;++y)
     {
@@ -151,7 +145,7 @@ static bool posStep(struct Mt3d * const inOutObj, double const inIota) // Iota: 
     double const x = inOutObj->posX+PLAYER_STEP_LEN*cos(inIota),
         y = inOutObj->posY-PLAYER_STEP_LEN*sin(inIota); // Subtraction, because cell coordinate system starts on top, Cartesian coordinate system at bottom.
 
-    if((enum CellType)inOutObj->map->cells[(int)y*inOutObj->map->width+(int)x]==CellType_block_default) // MT_TODO: TEST: Player has no width!
+    if(inOutObj->map->cells[(int)y*inOutObj->map->width+(int)x].type==CellType_block_default) // MT_TODO: TEST: Player has no width!
     {
         return false;
     }
@@ -204,6 +198,7 @@ static inline void fillPixel_block(
     struct Mt3d const * const inObj,
     enum CellType const inCellType,
     double const inCountLen,
+    double const inCeilingToEye,
     bool const inNextX,
     double const inLastX,
     double const inKlastY,
@@ -213,7 +208,7 @@ static inline void fillPixel_block(
     uint8_t * const inOutPix)
 {
     double imgX = inNextX?CALC_CARTESIAN_Y(inKlastY, (double)inObj->map->height):inLastX, // (Cartesian Y to cell Y coordinate conversion, if necessary)
-        imgY = inObj->ceilingToEye; // Correct value, if ray does not hit anything / is a straight line.
+        imgY = inCeilingToEye; // Correct value, if ray does not hit anything / is a straight line.
 
     imgX -= (double)((int)imgX); // Removes integer part.
     if((inNextX && inAddX!=1)||(!inNextX && inAddY!=1))
@@ -283,27 +278,27 @@ static inline void fillPixel_floor(struct Mt3d const * const inObj, enum CellTyp
     }
 }
 
-static void draw(void * inOutArg)
+static void draw(void * inOut)
 {
-    struct DrawInput const * const input = (struct DrawInput const *)inOutArg;
-    struct Mt3d * const inOutObj = input->o;
-    
-    double const mapHeight = (double)inOutObj->map->height,
-        kPosY = CALC_CARTESIAN_Y(inOutObj->posY, mapHeight);
+    struct DrawInput const * const input = (struct DrawInput const *)inOut;
+    int const truncPosX = (int)input->o->posX,
+            truncPosY = (int)input->o->posY;
+    struct Cell const * const playerCell = input->o->map->cells+truncPosY*input->o->map->width+truncPosX;
+    double const mapHeight = (double)input->o->map->height,
+        kPosY = CALC_CARTESIAN_Y(input->o->posY, mapHeight),
+        absEyeHeight = playerCell->floor+input->o->variables.playerEyeHeight;
     
     for(int y = input->firstRow;y<=input->lastRow;++y)
     {
-        int const truncPosX = (int)inOutObj->posX,
-            truncPosY = (int)inOutObj->posY,
-            rowByWidth = y*inOutObj->constants.res.w;
-        uint32_t * const rowPix = (uint32_t*)inOutObj->pixels+rowByWidth;
+        int rowByWidth = y*input->o->constants.res.w;
+        uint32_t * const rowPix = (uint32_t*)input->o->pixels+rowByWidth;
 
-        for(int x = 0;x<inOutObj->constants.res.w;++x)
+        for(int x = 0;x<input->o->constants.res.w;++x)
         {
             int const pos = rowByWidth+x;
             uint8_t * const colPix = (uint8_t*)(rowPix+x);
-            bool const hitsFloorOrCeil = inOutObj->hitType[pos]!=HitType_none;
-            double const zetaUnchecked = inOutObj->eta[pos]+inOutObj->gamma, // (might be out of expected range, but no problem - see usage below)
+            bool const hitsFloorOrCeil = input->o->hitType[pos]!=HitType_none;
+            double const zetaUnchecked = input->o->eta[pos]+input->o->gamma, // (might be out of expected range, but no problem - see usage below)
                 deltaX = cos(zetaUnchecked), // With parameter v in both rotation matrix..
                 deltaY = sin(zetaUnchecked); // ..formulas set to 1.0 [see Calc_fillRotated()].
             
@@ -313,7 +308,7 @@ static void draw(void * inOutArg)
             int const addX = CALC_SIGN_FROM_DOUBLE(deltaX),
                 addY = CALC_SIGN_FROM_DOUBLE(deltaY);
             double const m = deltaY/deltaX, // Slope. This equals tan(zeta).
-                b = kPosY-m*inOutObj->posX, // Y-intercept
+                b = kPosY-m*input->o->posX, // Y-intercept
                 hitXstep = (double)addY/**1.0*//m, // 1.0 is cell length.
                 hitYstep = (double)addX/**1.0*/*m; // 1.0 is cell length.
             
@@ -322,11 +317,11 @@ static void draw(void * inOutArg)
                 cellY = truncPosY,
                 xForHit = cellX+(int)(addX>0),
                 yForHit = (int)kPosY+(int)(addY>0); // (Cartesian Y coordinate)
-            double lastX = inOutObj->posX, // Store last reached coordinates for
+            double lastX = input->o->posX, // Store last reached coordinates for
                 kLastY = kPosY,            // brightness (and other) calculations.
                 hitX = ((double)yForHit-b)/m,
                 hitY = m*(double)xForHit+b;
-            enum CellType cellType = (enum CellType)inOutObj->map->cells[cellY*inOutObj->map->width+cellX];
+            struct Cell const * cell = input->o->map->cells+cellY*input->o->map->width+cellX;
 
             do
             {
@@ -335,16 +330,22 @@ static void draw(void * inOutArg)
                 bool const nextY = ( addX==1 && (int)hitX<xForHit ) || ( addX!=1 && hitX>=dblXForHit ),
                     nextX = ( addY==1 && (int)hitY<yForHit ) || ( addY!=1 && hitY>=dblYForHit );
 
-                assert(cellType!=CellType_block_default);
+                assert(cell->type!=CellType_block_default);
                 assert(nextX||nextY);
-
+                
                 if(hitsFloorOrCeil)
                 {
-                    double hypotenuse = 0.0; // Top view. This value's sign may not be correct (does not matter - see usage below).
+                    double hypotenuse = 0.0, // Top view. This value's sign may not be correct (does not matter - see usage below).
+                        distanceToEye = absEyeHeight-cell->floor;
 
+                    if(input->o->hitType[pos]==HitType_ceil)
+                    {
+                        distanceToEye = cell->floor+cell->height-absEyeHeight;
+                    }
+                    
                     if(nextX)
                     {
-                        hypotenuse = (dblXForHit-inOutObj->posX)/deltaX; // deltaX equals cos(zeta).
+                        hypotenuse = (dblXForHit-input->o->posX)/deltaX; // deltaX equals cos(zeta).
                     }
                     else
                     {
@@ -352,39 +353,23 @@ static void draw(void * inOutArg)
                         hypotenuse = (dblYForHit-kPosY)/deltaY;
                     }
                     
-                    double const iotaOpposite = tan(inOutObj->iota[pos])*fabs(hypotenuse); // Side view.
-                     
-                    double distanceToEye = inOutObj->hitType[pos]==HitType_ceil?inOutObj->ceilingToEye:inOutObj->floorToEye; // Does not matter, if !hitsFloorOrCeil.
-
-//                    if(cellX==24 && cellY==3)
-//                    {
-//                        distanceToEye = inOutObj->hitType[pos]==HitType_ceil?0.3:0.2;
-//                        
-//                        if(iotaOpposite>distanceToEye)
-//                        {
-//                            countLen = distanceToEye/sin(inOutObj->iota[pos]);
-//
-//                            double const d = countLen*cos(inOutObj->iota[pos]),
-//                                dX = d*deltaX+inOutObj->posX, // Using distance as parameter v of rotation matrix formula by multiplying deltaX with d.
-//                                dY = CALC_CARTESIAN_Y(d*deltaY+kPosY, mapHeight); // Cartesian Y to cell Y coordinate conversion. // Using distance as parameter v of rotation matrix formula by multiplying deltaY with d.
-//
-//                            //fillPixel_floor(inOutObj, cellType, dX, dY, colPix);
-//                            colPix[2] = 0;
-//                            colPix[1] = 0;
-//                            colPix[0] = 0xFF;
-//                            break;
-//                        }
-//                    }
+                    double const iotaOpposite = tan(input->o->iota[pos])*fabs(hypotenuse), // Side view.
+                        absDistanceToEye = fabs(distanceToEye);
                     
-                    if(iotaOpposite>distanceToEye)
+                    if(iotaOpposite>absDistanceToEye)
                     {
-                        countLen = distanceToEye/sin(inOutObj->iota[pos]);
+                        countLen = absDistanceToEye/sin(input->o->iota[pos]);
 
-                        double const d = countLen*cos(inOutObj->iota[pos]),
-                            dX = d*deltaX+inOutObj->posX, // Using distance as parameter v of rotation matrix formula by multiplying deltaX with d.
+//                        colPix[2] = 0;
+//                        colPix[1] = 0;
+//                        colPix[0] = 0xFF;
+//                        break;
+//                        
+                        double const d = countLen*cos(input->o->iota[pos]),
+                            dX = d*deltaX+input->o->posX, // Using distance as parameter v of rotation matrix formula by multiplying deltaX with d.
                             dY = CALC_CARTESIAN_Y(d*deltaY+kPosY, mapHeight); // Cartesian Y to cell Y coordinate conversion. // Using distance as parameter v of rotation matrix formula by multiplying deltaY with d.
-
-                        fillPixel_floor(inOutObj, cellType, dX, dY, colPix);
+                        
+                        fillPixel_floor(input->o, cell->type, dX, dY, colPix);
                         break;
                     }
                 }
@@ -396,7 +381,7 @@ static void draw(void * inOutArg)
                     lastX = hitX; // Update last..
                     kLastY = dblYForHit; // ..reached coordinates.
                     cellY -= addY;
-                    assert(cellY>=0 && cellY<inOutObj->map->height);
+                    assert(cellY>=0 && cellY<input->o->map->height);
                     yForHit += addY;
                     hitX += hitXstep;
                 }
@@ -405,20 +390,31 @@ static void draw(void * inOutArg)
                     kLastY = hitY; // Update last..
                     lastX = dblXForHit; // ..reached coordinates.
                     cellX += addX;
-                    assert(cellX>=0 && cellX<inOutObj->map->width);
+                    assert(cellX>=0 && cellX<input->o->map->width);
                     xForHit += addX;
                     hitY += hitYstep;
                 }
-                cellType = (enum CellType)inOutObj->map->cells[cellY*inOutObj->map->width+cellX];
+                cell = input->o->map->cells+cellY*input->o->map->width+cellX;
 
-                if(cellType==CellType_block_default) // Line/"ray" hits block's surface.
+                if(cell->type==CellType_block_default) // Line/"ray" hits block's surface.
                 {
                     countLen = fabs((kLastY-kPosY)/deltaY); // Equivalent (not equal!) to d.
                     if(hitsFloorOrCeil)
                     {
-                        countLen *= 1.0/cos(inOutObj->iota[pos]); // Equivalent (not equal!) to e.
+                        countLen *= 1.0/cos(input->o->iota[pos]); // Equivalent (not equal!) to e.
                     }
-                    fillPixel_block(inOutObj, cellType, countLen, nextX, lastX, kLastY, addX, addY, pos, colPix);
+                    fillPixel_block(
+                        input->o,
+                        cell->type,
+                        countLen,
+                        cell->floor+cell->height-(input->o->variables.playerEyeHeight-cell->floor),
+                        nextX,
+                        lastX,
+                        kLastY,
+                        addX,
+                        addY,
+                        pos,
+                        colPix);
                     break;
                 }
             }while(true);
@@ -428,8 +424,8 @@ static void draw(void * inOutArg)
             // *** Set brightness: ***
             // ***********************
             
-            double const brightness = (inOutObj->map->maxVisible-fmin(countLen, inOutObj->map->maxVisible))/inOutObj->map->maxVisible; // countLen 0 = 1.0, countLen maxVisible = 0.0;
-            int const sub = (int)((inOutObj->map->maxDarkness*255.0)*(1.0-brightness)+0.5), // Rounds
+            double const brightness = (input->o->map->maxVisible-fmin(countLen, input->o->map->maxVisible))/input->o->map->maxVisible; // countLen 0 = 1.0, countLen maxVisible = 0.0;
+            int const sub = (int)((input->o->map->maxDarkness*255.0)*(1.0-brightness)+0.5), // Rounds
                 red = (int)colPix[2]-sub,
                 green = (int)colPix[1]-sub,
                 blue = (int)colPix[0]-sub;
@@ -473,9 +469,7 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
             &inOutObj->variables,
             inOutObj->iota,
             inOutObj->eta,
-            inOutObj->hitType,
-            &inOutObj->floorToEye,
-            &inOutObj->ceilingToEye);
+            inOutObj->hitType);
     }
 
 #ifdef __STDC_NO_THREADS__
@@ -541,7 +535,31 @@ void Mt3d_setVariables(struct Mt3dVariables const * const inVariables, struct Mt
     assert(inVariables!=NULL);
     assert(inOutObj!=NULL);
 
-    inOutObj->doFill = true; // Triggers late fill() call by Mt3d_draw(), when needed.
+    if(!inOutObj->doFill) // Could be forced from outside of function.
+    {
+        inOutObj->doFill = true;
+        
+        do
+        {
+            if(inOutObj->variables.alpha!=inVariables->alpha)
+            {
+                break; // Trigger fill.
+            }
+            if(inOutObj->variables.beta!=inVariables->beta)
+            {
+                break; // Trigger fill.
+            }
+            if(inOutObj->variables.theta!=inVariables->theta)
+            {
+                break; // Trigger fill.
+            }
+            
+            //inOutObj->variables.h
+            
+            inOutObj->doFill = false;
+        }while(false);
+    }
+    
     inOutObj->variables = *inVariables;
 }
 
@@ -570,13 +588,11 @@ struct Mt3d * Mt3d_create(struct Mt3dParams const * const inParams)
 
         //.variables
 
-        .floorToEye = -1.0, // Invalidates
-        .ceilingToEye = -1.0, // Invalidates
         .iota = iota,
         .hitType = hitType,
         .eta = eta,
 
-        .doFill = false,
+        .doFill = true, // => Forces fill on next render run [see Mt3d_setVariables()].
         .updateCount = 0,
         .posX = 0.0,
         .posY = 0.0,

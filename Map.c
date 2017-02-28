@@ -14,7 +14,7 @@ void Map_print(struct Map const * const inOutObj, int const * const inPlayerX, i
     
     for(int row = 0, col = 0;row<inOutObj->height;++row)
     {
-        unsigned char const * const rowPtr = inOutObj->cells+row*inOutObj->width;
+        struct Cell const * const rowPtr = inOutObj->cells+row*inOutObj->width;
         bool const playerRow = player&&(row==*inPlayerY);
         
         for(col = 0;col<inOutObj->width;++col)
@@ -27,7 +27,7 @@ void Map_print(struct Map const * const inOutObj, int const * const inPlayerX, i
             }
             else
             {
-                switch((enum CellType)rowPtr[col])
+                switch(rowPtr[col].type)
                 {
                     case CellType_block_default:
                         c = 'X';
@@ -59,7 +59,7 @@ void Map_set(struct Map * const inOutObj, int const inRow, int const inCol, enum
     assert(inOutObj->width>inCol);
     assert(((int)inOutObj->posX!=inCol)||((int)inOutObj->posY!=inRow));
     
-    ((unsigned char *)inOutObj->cells)[inRow*inOutObj->width+inCol] = (unsigned char)inType;
+    inOutObj->cells[inRow*inOutObj->width+inCol].type = inType;
 }
 
 void Map_delete(struct Map * const inObj)
@@ -67,7 +67,7 @@ void Map_delete(struct Map * const inObj)
     assert(inObj!=NULL);
     
     assert(inObj->cells!=NULL);
-    free((unsigned char *)(inObj->cells));
+    free(inObj->cells);
     
     free(inObj);
 }

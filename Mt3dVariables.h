@@ -15,7 +15,7 @@ struct Mt3dVariables
     double alpha; // Horizontal range of view (radian). Better be below 180 degree.
     double beta; // Vertical range of view (radian). Better be below 180 degree.
     double theta; // CCW rotation of Z-axis.
-    double h; // Height of players eye as fraction of ceiling height (ceiling height is measured in cell lengths).
+    double playerEyeHeight; // Height of players eye in cell lengths measured from cell floor height.
 };
 
 #ifdef __cplusplus

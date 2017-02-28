@@ -5,6 +5,7 @@
 #define MT_MAP
 
 #include "CellType.h"
+#include "Cell.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -25,7 +26,7 @@ struct Map
     double const maxVisible; // Maximum visibility in cell length.
     double const maxDarkness; // Maximum darkness 
     
-    unsigned char const * const cells;
+    struct Cell * const cells;
 };
 
 void Map_print(struct Map const * const inOutObj, int const * const inPlayerX, int const * const inPlayerY);
