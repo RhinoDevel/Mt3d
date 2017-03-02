@@ -363,6 +363,8 @@ static void draw(void * inOut)
                     }
                     hEyeToExit = fabs(hEyeToExit);
                     
+                    // MT_TODO: TEST: If floor or ceiling gets hit depends on current cell's .floor & .height, too (straight line may also hit that "block")!
+                    //
                     if(input->o->hitType[pos]==HitType_ceil)
                     {
                         vEyeToFloorOrCeil = cell->floor+cell->height-fullEyeHeight;
