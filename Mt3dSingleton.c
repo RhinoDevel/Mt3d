@@ -228,7 +228,7 @@ static void applyInput()
 
     if(input->pos_forward!=input->pos_backward)
     {
-        Mt3d_pos_forwardOrBackward(o,  input->pos_forward); // (return value ignored)
+        Mt3d_pos_forwardOrBackward(o, input->pos_forward); // (return value ignored)
     }
 
     if(input->ang_left!=input->ang_right)
