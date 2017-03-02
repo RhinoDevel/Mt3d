@@ -144,11 +144,18 @@ static bool posStep(struct Mt3d * const inOutObj, double const inIota) // Iota: 
 {
     double const x = inOutObj->posX+PLAYER_STEP_LEN*cos(inIota),
         y = inOutObj->posY-PLAYER_STEP_LEN*sin(inIota); // Subtraction, because cell coordinate system starts on top, Cartesian coordinate system at bottom.
-
-    if(inOutObj->map->cells[(int)y*inOutObj->map->width+(int)x].type==CellType_block_default) // MT_TODO: TEST: Player has no width!
+    struct Cell const * const cell = inOutObj->map->cells+(int)y*inOutObj->map->width+(int)x;
+    
+    if(cell->type==CellType_block_default) // MT_TODO: TEST: Player has no width!
     {
         return false;
     }
+    if(cell->height<inOutObj->variables.playerEyeHeight) // MT_TODO: TEST: Player has no head (above the eyes..)!
+    {
+        return false;
+    }
+    // MT_TODO: TEST: Player can climb every height!
+    
     inOutObj->posX = x;
     inOutObj->posY = y;
     return true;
