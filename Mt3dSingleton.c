@@ -38,7 +38,9 @@ static bool pos_up()
 {
     assert(o!=NULL);
 
-    static double const H_MAX = 0.9;
+    double const H_MAX = o->map->cells[(int)o->posY*o->map->width+(int)o->posX].height; // Also see Mt3d.posStep().
+    
+    assert(o->variables.playerEyeHeight<=H_MAX);
     
     double h = 0.0;
 
@@ -69,7 +71,7 @@ static bool pos_down()
 {
     assert(o!=NULL);
 
-    static double const H_MIN = 0.1;
+    static double const H_MIN = 0.0; // Also see Mt3d.posStep().
     
     double h = 0.0;
 
