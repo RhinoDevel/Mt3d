@@ -215,9 +215,10 @@ static inline void fillPixel_block(
     static double const IMG_HEIGHT = 1.0; // In cell lengths.
     
     double imgX = inNextX?CALC_CARTESIAN_Y(inKlastY, (double)inObj->map->height):inLastX, // (Cartesian Y to cell Y coordinate conversion, if necessary)
-        imgY = inHitHeight;
+        imgY = inHitHeight,
+        val = 0.0;
 
-    imgX -= (double)((int)imgX); // Removes integer part.
+    imgX -= (double)(int)imgX; // Removes integer part.
     if((inNextX && inAddX!=1)||(!inNextX && inAddY!=1))
     {
         imgX = 1.0-imgX;
@@ -225,45 +226,33 @@ static inline void fillPixel_block(
     assert(imgX>=0.0 && imgX<1.0);
     
     if(inCell->type==CellType_block_default)
-    {
-        // Always start count at 0 (bottom).
-        
-        double const val = inHitHeight;
-        int const imgCnt = (int)val/IMG_HEIGHT;
-        double const topHitHeight = val-(double)imgCnt;
-        
-        assert(topHitHeight>=0.0);
-        
-        imgY = IMG_HEIGHT-topHitHeight;
+    { // Always start counting whole images at 0 (bottom):
+        val = inHitHeight;
     }
     else
     {
         if(inHitHeight<=inCell->floor)
-        {
-            // Start count at cell floor (top).
-            
-            double const val = inCell->floor-inHitHeight;
-            int const imgCnt = (int)val/IMG_HEIGHT;
-            double const bottomHitHeight = val-(double)imgCnt;
-            
-            assert(bottomHitHeight>=0.0);
-            
-            imgY = bottomHitHeight;
+        { // Start counting whole images at cell floor (top):
+            val = inCell->floor-inHitHeight;
         }
         else
-        {
+        { // Start counting whole images at cell ceiling (bottom):
             assert(inHitHeight>=inCell->floor+inCell->height);
-            
-            // Start count at cell ceiling (bottom).
-
-            double const val = inHitHeight-(inCell->floor+inCell->height);
-            int const imgCnt = (int)val/IMG_HEIGHT;
-            double const topHitHeight = val-(double)imgCnt;
-
-            assert(topHitHeight>=0.0);
-
-            imgY = IMG_HEIGHT-topHitHeight;
+            val = inHitHeight-inCell->floor-inCell->height;
         }
+    }
+    
+    int const wholeImagesCount = (int)val/IMG_HEIGHT;
+    double const imageFractionHitHeight = val-(double)wholeImagesCount;
+    
+    if(inCell->type==CellType_block_default || inHitHeight>inCell->floor)
+    {
+        imgY = IMG_HEIGHT-imageFractionHitHeight;
+    }
+    else
+    {
+        assert(inHitHeight<=inCell->floor);
+        imgY = imageFractionHitHeight;
     }
     assert(imgY>=0.0 && imgY<1.0);
 
