@@ -222,19 +222,13 @@ static inline void fillPixel_block(
     {
         imgX = 1.0-imgX;
     }
-#ifndef NDEBUG
-    if(!(imgX>=0.0 && imgX<1.0))
-    {
-        Deb_line("imgX = %f", imgX);
-    }
-#endif //NDEBUG
-    assert(imgX>=0.0 && imgX<1.0); // MT_TODO: TEST: Happens sometimes with rotation!
+    assert(imgX>=0.0 && imgX<1.0);
     
     if(inCell->type==CellType_block_default)
     {
-        // Always start count at cell floor (bottom).
+        // Always start count at 0 (bottom).
         
-        double const val = inHitHeight;//-inCell->floor;
+        double const val = inHitHeight;
         int const imgCnt = (int)val/IMG_HEIGHT;
         double const topHitHeight = val-(double)imgCnt;
         
@@ -258,34 +252,20 @@ static inline void fillPixel_block(
         }
         else
         {
-            if(inHitHeight>=inCell->floor+inCell->height)
-            {
-                // Start count at cell ceiling (bottom).
-                
-                double const val = inHitHeight-(inCell->floor+inCell->height);
-                int const imgCnt = (int)val/IMG_HEIGHT;
-                double const topHitHeight = val-(double)imgCnt;
-        
-                assert(topHitHeight>=0.0);
-        
-                imgY = IMG_HEIGHT-topHitHeight;
-            }
-#ifndef NDEBUG
-            else
-            {
-                assert(false);
-            }
-#endif //NDEBUG
+            assert(inHitHeight>=inCell->floor+inCell->height);
+            
+            // Start count at cell ceiling (bottom).
+
+            double const val = inHitHeight-(inCell->floor+inCell->height);
+            int const imgCnt = (int)val/IMG_HEIGHT;
+            double const topHitHeight = val-(double)imgCnt;
+
+            assert(topHitHeight>=0.0);
+
+            imgY = IMG_HEIGHT-topHitHeight;
         }
     }
-    
-#ifndef NDEBUG
-    if(!(imgY>=0.0 && imgY<1.0))
-    {
-        Deb_line("imgY = %f", imgY);
-    }
-#endif //NDEBUG
-    assert(imgY>=0.0 && imgY<1.0); // MT_TODO: TEST: Happens sometimes with rotation!
+    assert(imgY>=0.0 && imgY<1.0);
 
     fillPixel(inObj->bmp, (int)inCell->type, imgX, imgY, inOutPix);
 }
@@ -449,74 +429,13 @@ static void draw(void * inOut)
                 }
                 cell = input->o->map->cells+cellY*input->o->map->width+cellX;
                 
+                double const heightForHit = fullEyeHeight+(input->o->hitType[pos]==HitType_floor?-vEyeToExit:vEyeToExit);
+                //
+                if(cell->type==CellType_block_default || heightForHit<cell->floor || heightForHit>=cell->floor+cell->height)
                 {
-                    bool done = false;
-                    
-                    switch(input->o->hitType[pos])
-                    {
-                        case HitType_none:
-                            if(cell->type==CellType_block_default || fullEyeHeight<cell->floor || fullEyeHeight>=cell->floor+cell->height)
-                            {
-                                countLen = hEyeToExit;
-                                fillPixel_block(
-                                    input->o,
-                                    cell,
-                                    fullEyeHeight,
-                                    nextX,
-                                    lastX,
-                                    kLastY,
-                                    addX,
-                                    addY,
-                                    colPix);
-                                done = true;
-                                break;
-                            }
-                            break;
-                        case HitType_ceil:
-                            if(cell->type==CellType_block_default || fullEyeHeight+vEyeToExit<cell->floor || fullEyeHeight+vEyeToExit>=cell->floor+cell->height)
-                            {
-                                countLen = vEyeToExit/sin(input->o->iota[pos]);
-                                fillPixel_block(
-                                    input->o,
-                                    cell,
-                                    fullEyeHeight+vEyeToExit,
-                                    nextX,
-                                    lastX,
-                                    kLastY,
-                                    addX,
-                                    addY,
-                                    colPix);
-                                done = true;
-                                break;
-                            }
-                            break;
-                        case HitType_floor:
-                            if(cell->type==CellType_block_default || fullEyeHeight-vEyeToExit<cell->floor || fullEyeHeight-vEyeToExit>=cell->floor+cell->height)
-                            {
-                                countLen = vEyeToExit/sin(input->o->iota[pos]);
-                                fillPixel_block(
-                                    input->o,
-                                    cell,
-                                    fullEyeHeight-vEyeToExit,
-                                    nextX,
-                                    lastX,
-                                    kLastY,
-                                    addX,
-                                    addY,
-                                    colPix);
-                                done = true;
-                                break;
-                            }
-                            break;
-                            
-                        default:
-                            assert(false);
-                            break;
-                    }
-                    if(done)
-                    {
-                        break;
-                    }
+                    fillPixel_block(input->o, cell, heightForHit, nextX, lastX, kLastY, addX, addY, colPix);
+                    countLen = hitsFloorOrCeil?vEyeToExit/sin(input->o->iota[pos]):hEyeToExit;
+                    break;
                 }
             }while(true);
             assert(countLen>=0.0);
