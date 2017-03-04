@@ -201,64 +201,6 @@ static inline void fillPixel(struct Bmp * const inBitmaps[CellType_COUNT], int c
     inOutPix[2] = channelZeroPtr[2];
 }
 
-static inline void fillPixel_block(
-    struct Mt3d const * const inObj,
-    struct Cell const * const inCell,
-    double const inHitHeight,
-    bool const inNextX,
-    double const inLastX,
-    double const inKlastY,
-    int const inAddX,
-    int const inAddY,
-    uint8_t * const inOutPix)
-{
-    static double const IMG_HEIGHT = 1.0; // In cell lengths.
-    
-    double imgX = inNextX?CALC_CARTESIAN_Y(inKlastY, (double)inObj->map->height):inLastX, // (Cartesian Y to cell Y coordinate conversion, if necessary)
-        imgY = inHitHeight,
-        val = 0.0;
-
-    imgX -= (double)(int)imgX; // Removes integer part.
-    if((inNextX && inAddX!=1)||(!inNextX && inAddY!=1))
-    {
-        imgX = 1.0-imgX;
-    }
-    assert(imgX>=0.0 && imgX<1.0);
-    
-    if(inCell->type==CellType_block_default)
-    { // Always start counting whole images at 0 (bottom):
-        val = inHitHeight;
-    }
-    else
-    {
-        if(inHitHeight<=inCell->floor)
-        { // Start counting whole images at cell floor (top):
-            val = inCell->floor-inHitHeight;
-        }
-        else
-        { // Start counting whole images at cell ceiling (bottom):
-            assert(inHitHeight>=inCell->floor+inCell->height);
-            val = inHitHeight-inCell->floor-inCell->height;
-        }
-    }
-    
-    int const wholeImagesCount = (int)val/IMG_HEIGHT;
-    double const imageFractionHitHeight = val-(double)wholeImagesCount;
-    
-    if(inCell->type==CellType_block_default || inHitHeight>inCell->floor)
-    {
-        imgY = IMG_HEIGHT-imageFractionHitHeight;
-    }
-    else
-    {
-        assert(inHitHeight<=inCell->floor);
-        imgY = imageFractionHitHeight;
-    }
-    assert(imgY>=0.0 && imgY<1.0);
-
-    fillPixel(inObj->bmp, (int)inCell->type, imgX, imgY, inOutPix);
-}
-
 static inline void fillPixel_floor(struct Mt3d const * const inObj, enum CellType const inCellType, double const inDx, double const inDy, uint8_t * const inOutPix)
 {
     fillPixel(
@@ -331,6 +273,7 @@ static void draw(void * inOut)
                 hitX = ((double)yForHit-b)/m,
                 hitY = m*(double)xForHit+b;
             struct Cell const * cell = input->o->map->cells+cellY*input->o->map->width+cellX;
+            bool isBlock = cell->type==CellType_block_default;
 
             do
             {
@@ -342,7 +285,7 @@ static void draw(void * inOut)
                 double hEyeToExit = 0.0, // Side view: To hold horizontal distance from player's eye to where line/"ray" leaves the current cell.
                     vEyeToExit = 0.0;
 
-                assert(cell->type!=CellType_block_default);
+                assert(!isBlock);
                 assert(nextX||nextY);
                 
                 // Using top view to calculate this (where hEyeToExit is a hypotenuse):
@@ -417,14 +360,72 @@ static void draw(void * inOut)
                     hitY += hitYstep;
                 }
                 cell = input->o->map->cells+cellY*input->o->map->width+cellX;
+                isBlock = cell->type==CellType_block_default;
                 
-                double const heightForHit = fullEyeHeight+(input->o->hitType[pos]==HitType_floor?-vEyeToExit:vEyeToExit);
-                //
-                if(cell->type==CellType_block_default || heightForHit<cell->floor || heightForHit>=cell->floor+cell->height)
                 {
-                    fillPixel_block(input->o, cell, heightForHit, nextX, lastX, kLastY, addX, addY, colPix);
-                    countLen = hitsFloorOrCeil?vEyeToExit/sin(input->o->iota[pos]):hEyeToExit;
-                    break;
+                    double const heightForHit = fullEyeHeight+(input->o->hitType[pos]==HitType_floor?-vEyeToExit:vEyeToExit);
+                    bool floorHit = false,
+                        ceilHit = false;
+
+                    if(isBlock || (floorHit = heightForHit<cell->floor) || (ceilHit = heightForHit>=cell->floor+cell->height))
+                    {
+                        // **************************
+                        // *** FILL PIXEL "BLOCK" *** Start
+                        // **************************
+
+                        static double const IMG_HEIGHT = 1.0; // In cell lengths.
+
+                        double imgX = nextX?CALC_CARTESIAN_Y(kLastY, mapHeight):lastX, // (Cartesian Y to cell Y coordinate conversion, if necessary)
+                            imgY = heightForHit,
+                            val = 0.0;
+
+                        imgX -= (double)(int)imgX; // Removes integer part.
+                        if((nextX && addX!=1)||(!nextX && addY!=1))
+                        {
+                            imgX = 1.0-imgX;
+                        }
+                        assert(imgX>=0.0 && imgX<1.0);
+
+                        if(isBlock)
+                        { // Always start counting whole images at 0 (bottom):
+                            val = heightForHit;
+                        }
+                        else
+                        {
+                            if(floorHit)
+                            { // Start counting whole images at cell floor (top):
+                                val = cell->floor-heightForHit;
+                            }
+                            else
+                            { // Start counting whole images at cell ceiling (bottom):
+                                assert(ceilHit);
+                                val = heightForHit-cell->floor-cell->height;
+                            }
+                        }
+
+                        int const wholeImagesCount = (int)val/IMG_HEIGHT;
+                        double const imageFractionHitHeight = val-(double)wholeImagesCount;
+
+                        if(floorHit)
+                        {
+                            imgY = imageFractionHitHeight;
+                        }
+                        else
+                        {
+                            assert(isBlock||ceilHit);
+                            imgY = IMG_HEIGHT-imageFractionHitHeight;
+                        }
+                        assert(imgY>=0.0 && imgY<1.0);
+
+                        fillPixel(input->o->bmp, (int)cell->type, imgX, imgY, colPix);
+
+                        // **************************
+                        // *** FILL PIXEL "BLOCK" *** End
+                        // **************************
+
+                        countLen = hitsFloorOrCeil?vEyeToExit/sin(input->o->iota[pos]):hEyeToExit;
+                        break;
+                    }
                 }
             }while(true);
             assert(countLen>=0.0);
@@ -434,14 +435,14 @@ static void draw(void * inOut)
             // ***********************
             
             double const brightness = (input->o->map->maxVisible-fmin(countLen, input->o->map->maxVisible))/input->o->map->maxVisible; // countLen 0 = 1.0, countLen maxVisible = 0.0;
-            int const sub = (int)((input->o->map->maxDarkness*255.0)*(1.0-brightness)+0.5), // Rounds
+            int const sub = (int)(input->o->map->maxDarkness*255.0*(1.0-brightness)+0.5), // Rounds
                 red = (int)colPix[2]-sub,
                 green = (int)colPix[1]-sub,
                 blue = (int)colPix[0]-sub;
 
-            colPix[2] = red>0?(unsigned char)red:0;
-            colPix[1] = green>0?(unsigned char)green:0;
-            colPix[0] = blue>0?(unsigned char)blue:0;
+            colPix[2] = (uint8_t)((int)(red>0)*red);//red>0?(uint8_t)red:0;
+            colPix[1] = (uint8_t)((int)(green>0)*green);//green>0?(uint8_t)green:0;
+            colPix[0] = (uint8_t)((int)(blue>0)*blue);//blue>0?(uint8_t)blue:0;
         }
     }
 }
