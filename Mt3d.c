@@ -362,60 +362,40 @@ static void draw(void * inOut)
                 cell = input->o->map->cells+cellY*input->o->map->width+cellX;
                 isBlock = cell->type==CellType_block_default;
                 
+                // Will the NEXT cell's border get hit?
+                //
                 {
                     double const heightForHit = fullEyeHeight+(input->o->hitType[pos]==HitType_floor?-vEyeToExit:vEyeToExit);
-                    bool floorHit = false,
-                        ceilHit = false;
+                    bool floorHit = false;
 
-                    if(isBlock || (floorHit = heightForHit<cell->floor) || (ceilHit = heightForHit>=cell->floor+cell->height))
-                    {
+                    if(isBlock || (floorHit = heightForHit<cell->floor) || heightForHit>=cell->floor+cell->height)
+                    { // Yes, it is getting hit!
                         // **************************
                         // *** FILL PIXEL "BLOCK" *** Start
                         // **************************
 
-                        static double const IMG_HEIGHT = 1.0; // In cell lengths.
-
+                        static double const IMG_HEIGHT = 1.0, // In cell lengths.
+                            IMG_WIDTH = 1.0; // In cell lengths.
                         double imgX = nextX?CALC_CARTESIAN_Y(kLastY, mapHeight):lastX, // (Cartesian Y to cell Y coordinate conversion, if necessary)
-                            imgY = heightForHit,
-                            val = 0.0;
+                            imgY = isBlock
+                                 ? heightForHit // Block [always start counting whole images at 0 (bottom)].
+                                 : floorHit
+                                    ?cell->floor-heightForHit // Floor hit. Start counting whole images at cell floor (top).
+                                    :heightForHit-cell->floor-cell->height; // Ceiling hit. Start counting whole images at cell ceiling (bottom).
 
                         imgX -= (double)(int)imgX; // Removes integer part.
+                        assert(imgX>=0.0 && imgX<IMG_WIDTH);
                         if((nextX && addX!=1)||(!nextX && addY!=1))
                         {
-                            imgX = 1.0-imgX;
-                        }
-                        assert(imgX>=0.0 && imgX<1.0);
-
-                        if(isBlock)
-                        { // Always start counting whole images at 0 (bottom):
-                            val = heightForHit;
-                        }
-                        else
-                        {
-                            if(floorHit)
-                            { // Start counting whole images at cell floor (top):
-                                val = cell->floor-heightForHit;
-                            }
-                            else
-                            { // Start counting whole images at cell ceiling (bottom):
-                                assert(ceilHit);
-                                val = heightForHit-cell->floor-cell->height;
-                            }
+                            imgX = IMG_WIDTH-imgX;
                         }
 
-                        int const wholeImagesCount = (int)val/IMG_HEIGHT;
-                        double const imageFractionHitHeight = val-(double)wholeImagesCount;
-
-                        if(floorHit)
+                        imgY = imgY-(double)((int)imgY/IMG_HEIGHT); // Removes count of whole images fitting in and sets imgY to fraction.
+                        assert(imgY>=0.0 && imgY<IMG_HEIGHT);
+                        if(!floorHit)
                         {
-                            imgY = imageFractionHitHeight;
-                        }
-                        else
-                        {
-                            assert(isBlock||ceilHit);
-                            imgY = IMG_HEIGHT-imageFractionHitHeight;
-                        }
-                        assert(imgY>=0.0 && imgY<1.0);
+                            imgY = IMG_HEIGHT-imgY; // Correct for block or ceiling hit.
+                        }  
 
                         fillPixel(input->o->bmp, (int)cell->type, imgX, imgY, colPix);
 
