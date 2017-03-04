@@ -203,19 +203,19 @@ static inline void fillPixel(struct Bmp * const inBitmaps[CellType_COUNT], int c
 
 static inline void fillPixel_block(
     struct Mt3d const * const inObj,
-    enum CellType const inCellType,
-    double const inCountLen,
-    double const inCeilingToEye,
+    struct Cell const * const inCell,
+    double const inHitHeight,
     bool const inNextX,
     double const inLastX,
     double const inKlastY,
     int const inAddX,
     int const inAddY,
-    int const inPos,
     uint8_t * const inOutPix)
 {
+    static double const IMG_HEIGHT = 1.0; // In cell lengths.
+    
     double imgX = inNextX?CALC_CARTESIAN_Y(inKlastY, (double)inObj->map->height):inLastX, // (Cartesian Y to cell Y coordinate conversion, if necessary)
-        imgY = inCeilingToEye; // Correct value, if ray does not hit anything / is a straight line.
+        imgY = inHitHeight;
 
     imgX -= (double)((int)imgX); // Removes integer part.
     if((inNextX && inAddX!=1)||(!inNextX && inAddY!=1))
@@ -229,23 +229,56 @@ static inline void fillPixel_block(
     }
 #endif //NDEBUG
     assert(imgX>=0.0 && imgX<1.0); // MT_TODO: TEST: Happens sometimes with rotation!
-
-    switch(inObj->hitType[inPos])
+    
+    if(inCell->type==CellType_block_default)
     {
-        case HitType_none:
-            break; // Nothing to do.
-        case HitType_ceil:
-            imgY -= inCountLen*sin(inObj->iota[inPos]);
-            break;
-        case HitType_floor:
-            imgY += inCountLen*sin(inObj->iota[inPos]);
-            break;
-
-        default:
-            assert(false);
-            break;
+        // Always start count at cell floor (bottom).
+        
+        double const val = inHitHeight;//-inCell->floor;
+        int const imgCnt = (int)val/IMG_HEIGHT;
+        double const topHitHeight = val-(double)imgCnt;
+        
+        assert(topHitHeight>=0.0);
+        
+        imgY = IMG_HEIGHT-topHitHeight;
     }
-    imgY -= (double)(int)imgY; // Only valid for cell width being 1.0!
+    else
+    {
+        if(inHitHeight<=inCell->floor)
+        {
+            // Start count at cell floor (top).
+            
+            double const val = inCell->floor-inHitHeight;
+            int const imgCnt = (int)val/IMG_HEIGHT;
+            double const bottomHitHeight = val-(double)imgCnt;
+            
+            assert(bottomHitHeight>=0.0);
+            
+            imgY = bottomHitHeight;
+        }
+        else
+        {
+            if(inHitHeight>=inCell->floor+inCell->height)
+            {
+                // Start count at cell ceiling (bottom).
+                
+                double const val = inHitHeight-(inCell->floor+inCell->height);
+                int const imgCnt = (int)val/IMG_HEIGHT;
+                double const topHitHeight = val-(double)imgCnt;
+        
+                assert(topHitHeight>=0.0);
+        
+                imgY = IMG_HEIGHT-topHitHeight;
+            }
+#ifndef NDEBUG
+            else
+            {
+                assert(false);
+            }
+#endif //NDEBUG
+        }
+    }
+    
 #ifndef NDEBUG
     if(!(imgY>=0.0 && imgY<1.0))
     {
@@ -254,7 +287,7 @@ static inline void fillPixel_block(
 #endif //NDEBUG
     assert(imgY>=0.0 && imgY<1.0); // MT_TODO: TEST: Happens sometimes with rotation!
 
-    fillPixel(inObj->bmp, (int)inCellType, imgX, imgY, inOutPix);
+    fillPixel(inObj->bmp, (int)inCell->type, imgX, imgY, inOutPix);
 }
 
 static inline void fillPixel_floor(struct Mt3d const * const inObj, enum CellType const inCellType, double const inDx, double const inDy, uint8_t * const inOutPix)
@@ -343,28 +376,26 @@ static void draw(void * inOut)
                 assert(cell->type!=CellType_block_default);
                 assert(nextX||nextY);
                 
+                // Using top view to calculate this (where hEyeToExit is a hypotenuse):
+                //
+                if(nextX)
+                {
+                    hEyeToExit = (dblXForHit-input->o->posX)/deltaX; // deltaX equals cos(zeta).
+                }
+                else
+                {
+                    assert(nextY);
+                    hEyeToExit = (dblYForHit-kPosY)/deltaY;
+                }
+                hEyeToExit = fabs(hEyeToExit);
+                
                 // If this is not a straight horizontal line/"ray", check first,
                 // if current cell's floor/ceiling will be hit by it:
                 //
                 if(hitsFloorOrCeil)
                 {
                     double vEyeToFloorOrCeil = 0.0; // Side view: To hold vertical distance from player's eye to current cell's floor or ceiling.
-                    
-                    // Using top view to calculate this (where hEyeToExit is a hypotenuse):
-                    //
-                    if(nextX)
-                    {
-                        hEyeToExit = (dblXForHit-input->o->posX)/deltaX; // deltaX equals cos(zeta).
-                    }
-                    else
-                    {
-                        assert(nextY);
-                        hEyeToExit = (dblYForHit-kPosY)/deltaY;
-                    }
-                    hEyeToExit = fabs(hEyeToExit);
-                    
-                    // MT_TODO: TEST: If floor or ceiling gets hit depends on current cell's .floor & .height, too (straight line may also hit that "block")!
-                    //
+
                     if(input->o->hitType[pos]==HitType_ceil)
                     {
                         vEyeToFloorOrCeil = cell->floor+cell->height-fullEyeHeight;
@@ -385,12 +416,7 @@ static void draw(void * inOut)
                     if(vEyeToExit>=vEyeToFloorOrCeil)
                     { // => Line/"ray" hits floor/ceiling of current cell.
                         countLen = vEyeToFloorOrCeil/sin(input->o->iota[pos]);
-
-//                        colPix[2] = 0;
-//                        colPix[1] = 0;
-//                        colPix[0] = 0xFF;
-//                        break;
-//                        
+                       
                         double const d = countLen*cos(input->o->iota[pos]),
                             dX = d*deltaX+input->o->posX, // Using distance as parameter v of rotation matrix formula by multiplying deltaX with d.
                             dY = CALC_CARTESIAN_Y(d*deltaY+kPosY, mapHeight); // Cartesian Y to cell Y coordinate conversion. // Using distance as parameter v of rotation matrix formula by multiplying deltaY with d.
@@ -422,61 +448,73 @@ static void draw(void * inOut)
                     hitY += hitYstep;
                 }
                 cell = input->o->map->cells+cellY*input->o->map->width+cellX;
-
-                if(cell->type==CellType_block_default) // Line/"ray" hits block's surface.
-                {
-                    if(hitsFloorOrCeil)
-                    {
-                        countLen = hEyeToExit;
-                    }
-                    else
-                    {
-                        countLen = fabs((kLastY-kPosY)/deltaY);
-                    }
-
-                    fillPixel_block(
-                        input->o,
-                        cell->type,
-                        countLen,
-                        cell->floor+cell->height-(input->o->variables.playerEyeHeight-cell->floor),
-                        nextX,
-                        lastX,
-                        kLastY,
-                        addX,
-                        addY,
-                        pos,
-                        colPix);
-                    break;
-                }
                 
-                if(hitsFloorOrCeil)
                 {
-                    double buf = 0.0; // This "is" vEyeToFloorOrCeil.
+                    bool done = false;
                     
-                    if(input->o->hitType[pos]==HitType_ceil)
+                    switch(input->o->hitType[pos])
                     {
-                        buf = cell->floor+cell->height-fullEyeHeight;
+                        case HitType_none:
+                            if(cell->type==CellType_block_default || fullEyeHeight<cell->floor || fullEyeHeight>=cell->floor+cell->height)
+                            {
+                                countLen = hEyeToExit;
+                                fillPixel_block(
+                                    input->o,
+                                    cell,
+                                    fullEyeHeight,
+                                    nextX,
+                                    lastX,
+                                    kLastY,
+                                    addX,
+                                    addY,
+                                    colPix);
+                                done = true;
+                                break;
+                            }
+                            break;
+                        case HitType_ceil:
+                            if(cell->type==CellType_block_default || fullEyeHeight+vEyeToExit<cell->floor || fullEyeHeight+vEyeToExit>=cell->floor+cell->height)
+                            {
+                                countLen = vEyeToExit/sin(input->o->iota[pos]);
+                                fillPixel_block(
+                                    input->o,
+                                    cell,
+                                    fullEyeHeight+vEyeToExit,
+                                    nextX,
+                                    lastX,
+                                    kLastY,
+                                    addX,
+                                    addY,
+                                    colPix);
+                                done = true;
+                                break;
+                            }
+                            break;
+                        case HitType_floor:
+                            if(cell->type==CellType_block_default || fullEyeHeight-vEyeToExit<cell->floor || fullEyeHeight-vEyeToExit>=cell->floor+cell->height)
+                            {
+                                countLen = vEyeToExit/sin(input->o->iota[pos]);
+                                fillPixel_block(
+                                    input->o,
+                                    cell,
+                                    fullEyeHeight-vEyeToExit,
+                                    nextX,
+                                    lastX,
+                                    kLastY,
+                                    addX,
+                                    addY,
+                                    colPix);
+                                done = true;
+                                break;
+                            }
+                            break;
+                            
+                        default:
+                            assert(false);
+                            break;
                     }
-                    else
+                    if(done)
                     {
-                        buf = fullEyeHeight-cell->floor;
-                    }
-                    if(buf<vEyeToExit)
-                    {
-                        countLen = hEyeToExit;
-
-                        fillPixel_block(
-                            input->o,
-                            cell->type,
-                            countLen,
-                            cell->floor+cell->height-(input->o->variables.playerEyeHeight-cell->floor),
-                            nextX,
-                            lastX,
-                            kLastY,
-                            addX,
-                            addY,
-                            pos,
-                            colPix);
                         break;
                     }
                 }
