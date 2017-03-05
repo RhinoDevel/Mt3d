@@ -221,8 +221,8 @@ static void draw(void * inOut)
                 hitYstep = (double)addX/**1.0*/*m; // 1.0 is cell length.
             
             double countLen = -1.0, // Means unset.
-                imgX = -1.0,
-                imgY = -1.0;
+                relBmpX = -1.0,
+                relBmpY = -1.0;
             int cellX = truncPosX,
                 cellY = truncPosY,
                 xForHit = cellX+(int)(addX>0),
@@ -292,8 +292,8 @@ static void draw(void * inOut)
                             dX = d*deltaX+input->o->posX, // Using distance as parameter v of rotation matrix formula by multiplying deltaX with d.
                             dY = CALC_CARTESIAN_Y(d*deltaY+kPosY, mapHeight); // Cartesian Y to cell Y coordinate conversion. // Using distance as parameter v of rotation matrix formula by multiplying deltaY with d.
 
-                        imgX = dX-(double)((int)dX); // Removes integer part.
-                        imgY = dY-(double)((int)dY); // Removes integer part.
+                        relBmpX = dX-(double)((int)dX); // Removes integer part.
+                        relBmpY = dY-(double)((int)dY); // Removes integer part.
                         break;
                     } // Otherwise: Line/"ray" travels to next cell.
                 }
@@ -339,25 +339,25 @@ static void draw(void * inOut)
                         static double const IMG_HEIGHT = 1.0, // In cell lengths.
                             IMG_WIDTH = 1.0; // In cell lengths.
                         
-                        imgX = nextX?CALC_CARTESIAN_Y(kLastY, mapHeight):lastX; // (Cartesian Y to cell Y coordinate conversion, if necessary)
-                        imgY = isBlock
+                        relBmpX = nextX?CALC_CARTESIAN_Y(kLastY, mapHeight):lastX; // (Cartesian Y to cell Y coordinate conversion, if necessary)
+                        relBmpY = isBlock
                              ? heightForHit // Block [always start counting whole images at 0 (bottom)].
                              : floorHit
                                ? cell->floor-heightForHit // Floor hit. Start counting whole images at cell floor (top).
                                : heightForHit-cell->floor-cell->height; // Ceiling hit. Start counting whole images at cell ceiling (bottom).
 
-                        imgX -= (double)(int)imgX; // Removes integer part.
-                        assert(imgX>=0.0 && imgX<IMG_WIDTH);
+                        relBmpX -= (double)(int)relBmpX; // Removes integer part.
+                        assert(relBmpX>=0.0 && relBmpX<IMG_WIDTH);
                         if((nextX && addX!=1)||(!nextX && addY!=1))
                         {
-                            imgX = IMG_WIDTH-imgX;
+                            relBmpX = IMG_WIDTH-relBmpX;
                         }
 
-                        imgY = imgY-(double)((int)imgY/IMG_HEIGHT); // Removes count of whole images fitting in and sets imgY to fraction.
-                        assert(imgY>=0.0 && imgY<IMG_HEIGHT);
+                        relBmpY = relBmpY-(double)((int)relBmpY/IMG_HEIGHT); // Removes count of whole images fitting in and sets relBmpY to fraction.
+                        assert(relBmpY>=0.0 && relBmpY<IMG_HEIGHT);
                         if(!floorHit)
                         {
-                            imgY = IMG_HEIGHT-imgY; // Correct for block or ceiling hit.
+                            relBmpY = IMG_HEIGHT-relBmpY; // Correct for block or ceiling hit.
                         }  
 
                         // **************************
@@ -375,13 +375,13 @@ static void draw(void * inOut)
             // *** FILL PIXEL *** Start
             // ******************
 
-            assert(imgX>=0.0 && imgX<1.0);
-            assert(imgY>=0.0 && imgY<1.0);
+            assert(relBmpX>=0.0 && relBmpX<1.0);
+            assert(relBmpY>=0.0 && relBmpY<1.0);
 
             struct Bmp const * const bmp = input->o->bmp[(int)cell->type];
             uint8_t const * const bmpChannel = bmp->p
-                                          + 3*bmp->d.w*(int)((double)bmp->d.h*imgY) // Hard-coded for 24 bits per pixel. Truncates.
-                                          + 3*(int)((double)bmp->d.h*imgX); // Hard-coded for 24 bits per pixel. Truncates.
+                                          + 3*bmp->d.w*(int)((double)bmp->d.h*relBmpY) // Hard-coded for 24 bits per pixel. Truncates.
+                                          + 3*(int)((double)bmp->d.h*relBmpX); // Hard-coded for 24 bits per pixel. Truncates.
 
             assert(!Sys_is_big_endian());
             *colPix = 0xFF000000ul+((uint32_t)bmpChannel[2]<<16)+((uint32_t)bmpChannel[1]<<8)+(uint32_t)bmpChannel[0];
