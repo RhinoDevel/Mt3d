@@ -25,12 +25,12 @@ struct DrawInput
     int lastRow;
 };
 
-/** Return current second of game time.
- */
-static uint64_t getSecond(struct Mt3d const * const inObj)
-{
-    return (inObj->updateCount*(uint64_t)inObj->constants.msPerUpdate)/1000;
-}
+///** Return current second of game time.
+// */
+//static uint64_t getSecond(struct Mt3d const * const inObj)
+//{
+//    return (inObj->updateCount*(uint64_t)inObj->constants.msPerUpdate)/1000;
+//}
 
 static void fill(
     struct Mt3dConstants const * const inC,
@@ -186,51 +186,6 @@ bool Mt3d_pos_leftOrRight(struct Mt3d * const inOutObj, bool inLeft)
     return posStep(inOutObj, CALC_ANGLE_TO_POS(inOutObj->gamma+(inLeft?1.0:-1.0)*M_PI_2));
 }
 
-static inline void fillPixel(struct Bmp * const inBitmaps[CellType_COUNT], int const inBmpIndex, double const inImgX, double const inImgY, uint32_t * const inOutPix)
-{
-    assert(inImgX>=0.0 && inImgX<1.0);
-    assert(inImgY>=0.0 && inImgY<1.0);
-
-    struct Bmp const * const bmp = inBitmaps[inBmpIndex];
-    int const row = (int)((double)bmp->d.h*inImgY), // Truncates
-        col = (int)((double)bmp->d.h*inImgX); // Truncates
-    uint8_t const * const channelZeroPtr = bmp->p+3*bmp->d.w*row+3*col;
-    uint8_t * const out = (uint8_t*)inOutPix;
-
-    out[0] = channelZeroPtr[0];
-    out[1] = channelZeroPtr[1];
-    out[2] = channelZeroPtr[2];
-    out[3] = 0;
-}
-
-static inline void fillPixel_floor(struct Mt3d const * const inObj, enum CellType const inCellType, double const inDx, double const inDy, uint32_t * const inOutPix)
-{
-    fillPixel(
-        inObj->bmp,
-        (int)inCellType,
-        inDx-(double)((int)inDx), // Removes integer part.
-        inDy-(double)((int)inDy), // Removes integer part.
-        inOutPix);
-
-    switch(inCellType)
-    {
-        case CellType_floor_default:
-            break;
-        case CellType_floor_exit:
-            if(getSecond(inObj)%2)
-            {
-                inOutPix[0] = ~inOutPix[0];
-                inOutPix[1] = ~inOutPix[1];
-                inOutPix[2] = ~inOutPix[2];
-            }
-            break;
-
-        default:
-            assert(false);
-            break;
-    }
-}
-
 static void draw(void * inOut)
 {
     struct DrawInput const * const input = (struct DrawInput const *)inOut;
@@ -247,7 +202,7 @@ static void draw(void * inOut)
         uint32_t * const rowPix = input->o->pixels+rowByWidth;
 
         for(int x = 0;x<input->o->constants.res.w;++x)
-        {
+        {   
             int const pos = rowByWidth+x;
             uint32_t * const colPix = rowPix+x;
             bool const hitsFloorOrCeil = input->o->hitType[pos]!=HitType_none;
@@ -265,7 +220,9 @@ static void draw(void * inOut)
                 hitXstep = (double)addY/**1.0*//m, // 1.0 is cell length.
                 hitYstep = (double)addX/**1.0*/*m; // 1.0 is cell length.
             
-            double countLen = -1.0; // Means unset.
+            double countLen = -1.0, // Means unset.
+                imgX = -1.0,
+                imgY = -1.0;
             int cellX = truncPosX,
                 cellY = truncPosY,
                 xForHit = cellX+(int)(addX>0),
@@ -334,8 +291,9 @@ static void draw(void * inOut)
                         double const d = countLen*cos(input->o->iota[pos]),
                             dX = d*deltaX+input->o->posX, // Using distance as parameter v of rotation matrix formula by multiplying deltaX with d.
                             dY = CALC_CARTESIAN_Y(d*deltaY+kPosY, mapHeight); // Cartesian Y to cell Y coordinate conversion. // Using distance as parameter v of rotation matrix formula by multiplying deltaY with d.
-                        
-                        fillPixel_floor(input->o, cell->type, dX, dY, colPix);
+
+                        imgX = dX-(double)((int)dX); // Removes integer part.
+                        imgY = dY-(double)((int)dY); // Removes integer part.
                         break;
                     } // Otherwise: Line/"ray" travels to next cell.
                 }
@@ -372,18 +330,21 @@ static void draw(void * inOut)
 
                     if(isBlock || (floorHit = heightForHit<cell->floor) || cell->floor+cell->height<heightForHit)
                     { // Yes, it is getting hit!
+                        countLen = hitsFloorOrCeil?vEyeToExit/sin(input->o->iota[pos]):hEyeToExit;
+                        
                         // **************************
                         // *** FILL PIXEL "BLOCK" *** Start
                         // **************************
 
                         static double const IMG_HEIGHT = 1.0, // In cell lengths.
                             IMG_WIDTH = 1.0; // In cell lengths.
-                        double imgX = nextX?CALC_CARTESIAN_Y(kLastY, mapHeight):lastX, // (Cartesian Y to cell Y coordinate conversion, if necessary)
-                            imgY = isBlock
-                                 ? heightForHit // Block [always start counting whole images at 0 (bottom)].
-                                 : floorHit
-                                    ?cell->floor-heightForHit // Floor hit. Start counting whole images at cell floor (top).
-                                    :heightForHit-cell->floor-cell->height; // Ceiling hit. Start counting whole images at cell ceiling (bottom).
+                        
+                        imgX = nextX?CALC_CARTESIAN_Y(kLastY, mapHeight):lastX; // (Cartesian Y to cell Y coordinate conversion, if necessary)
+                        imgY = isBlock
+                             ? heightForHit // Block [always start counting whole images at 0 (bottom)].
+                             : floorHit
+                               ? cell->floor-heightForHit // Floor hit. Start counting whole images at cell floor (top).
+                               : heightForHit-cell->floor-cell->height; // Ceiling hit. Start counting whole images at cell ceiling (bottom).
 
                         imgX -= (double)(int)imgX; // Removes integer part.
                         assert(imgX>=0.0 && imgX<IMG_WIDTH);
@@ -399,18 +360,35 @@ static void draw(void * inOut)
                             imgY = IMG_HEIGHT-imgY; // Correct for block or ceiling hit.
                         }  
 
-                        fillPixel(input->o->bmp, (int)cell->type, imgX, imgY, colPix);
-
                         // **************************
                         // *** FILL PIXEL "BLOCK" *** End
                         // **************************
-
-                        countLen = hitsFloorOrCeil?vEyeToExit/sin(input->o->iota[pos]):hEyeToExit;
+                        
                         break;
                     }
                 }
             }while(true);
+            
             assert(countLen>=0.0);
+            
+            // ******************
+            // *** FILL PIXEL *** Start
+            // ******************
+
+            assert(imgX>=0.0 && imgX<1.0);
+            assert(imgY>=0.0 && imgY<1.0);
+
+            struct Bmp const * const bmp = input->o->bmp[(int)cell->type];
+            uint8_t const * const bmpChannel = bmp->p
+                                          + 3*bmp->d.w*(int)((double)bmp->d.h*imgY) // Hard-coded for 24 bits per pixel. Truncates.
+                                          + 3*(int)((double)bmp->d.h*imgX); // Hard-coded for 24 bits per pixel. Truncates.
+
+            assert(!Sys_is_big_endian());
+            *colPix = 0xFF000000ul+((uint32_t)bmpChannel[2]<<16)+((uint32_t)bmpChannel[1]<<8)+(uint32_t)bmpChannel[0];
+
+            // ******************
+            // *** FILL PIXEL *** End
+            // ******************
 
             // ***********************
             // *** Set brightness: ***
