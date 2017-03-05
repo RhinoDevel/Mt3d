@@ -75,7 +75,7 @@ struct Mt3d
     double gamma; // Angle (radian) telling the player's view direction.
 
     struct Map * map; // Does NOT take ownership.
-    unsigned char * pixels; // Does NOT take ownership.
+    uint32_t * pixels; // Does NOT take ownership.
 };
 
 bool Mt3d_ang_leftOrRight(struct Mt3d * const inOutObj, bool inLeft);

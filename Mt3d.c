@@ -186,7 +186,7 @@ bool Mt3d_pos_leftOrRight(struct Mt3d * const inOutObj, bool inLeft)
     return posStep(inOutObj, CALC_ANGLE_TO_POS(inOutObj->gamma+(inLeft?1.0:-1.0)*M_PI_2));
 }
 
-static inline void fillPixel(struct Bmp * const inBitmaps[CellType_COUNT], int const inBmpIndex, double const inImgX, double const inImgY, uint8_t * const inOutPix)
+static inline void fillPixel(struct Bmp * const inBitmaps[CellType_COUNT], int const inBmpIndex, double const inImgX, double const inImgY, uint32_t * const inOutPix)
 {
     assert(inImgX>=0.0 && inImgX<1.0);
     assert(inImgY>=0.0 && inImgY<1.0);
@@ -194,14 +194,16 @@ static inline void fillPixel(struct Bmp * const inBitmaps[CellType_COUNT], int c
     struct Bmp const * const bmp = inBitmaps[inBmpIndex];
     int const row = (int)((double)bmp->d.h*inImgY), // Truncates
         col = (int)((double)bmp->d.h*inImgX); // Truncates
-    unsigned char const * const channelZeroPtr = bmp->p+3*bmp->d.w*row+3*col;
+    uint8_t const * const channelZeroPtr = bmp->p+3*bmp->d.w*row+3*col;
+    uint8_t * const out = (uint8_t*)inOutPix;
 
-    inOutPix[0] = channelZeroPtr[0];
-    inOutPix[1] = channelZeroPtr[1];
-    inOutPix[2] = channelZeroPtr[2];
+    out[0] = channelZeroPtr[0];
+    out[1] = channelZeroPtr[1];
+    out[2] = channelZeroPtr[2];
+    out[3] = 0;
 }
 
-static inline void fillPixel_floor(struct Mt3d const * const inObj, enum CellType const inCellType, double const inDx, double const inDy, uint8_t * const inOutPix)
+static inline void fillPixel_floor(struct Mt3d const * const inObj, enum CellType const inCellType, double const inDx, double const inDy, uint32_t * const inOutPix)
 {
     fillPixel(
         inObj->bmp,
@@ -242,12 +244,12 @@ static void draw(void * inOut)
     for(int y = input->firstRow;y<=input->lastRow;++y)
     {
         int const rowByWidth = y*input->o->constants.res.w;
-        uint32_t * const rowPix = (uint32_t*)input->o->pixels+rowByWidth;
+        uint32_t * const rowPix = input->o->pixels+rowByWidth;
 
         for(int x = 0;x<input->o->constants.res.w;++x)
         {
             int const pos = rowByWidth+x;
-            uint8_t * const colPix = (uint8_t*)(rowPix+x);
+            uint32_t * const colPix = rowPix+x;
             bool const hitsFloorOrCeil = input->o->hitType[pos]!=HitType_none;
             double const zetaUnchecked = input->o->eta[pos]+input->o->gamma, // (might be out of expected range, but no problem - see usage below)
                 deltaX = cos(zetaUnchecked), // With parameter v in both rotation matrix..
@@ -368,7 +370,7 @@ static void draw(void * inOut)
                     double const heightForHit = fullEyeHeight+(input->o->hitType[pos]==HitType_floor?-vEyeToExit:vEyeToExit);
                     bool floorHit = false;
 
-                    if(isBlock || (floorHit = heightForHit<cell->floor) || heightForHit>=cell->floor+cell->height)
+                    if(isBlock || (floorHit = heightForHit<cell->floor) || cell->floor+cell->height<heightForHit)
                     { // Yes, it is getting hit!
                         // **************************
                         // *** FILL PIXEL "BLOCK" *** Start
@@ -414,15 +416,16 @@ static void draw(void * inOut)
             // *** Set brightness: ***
             // ***********************
             
+            uint8_t * const channel = (uint8_t*)colPix;
             double const brightness = (input->o->map->maxVisible-fmin(countLen, input->o->map->maxVisible))/input->o->map->maxVisible; // countLen 0 = 1.0, countLen maxVisible = 0.0;
             int const sub = (int)(input->o->map->maxDarkness*255.0*(1.0-brightness)+0.5), // Rounds
-                red = (int)colPix[2]-sub,
-                green = (int)colPix[1]-sub,
-                blue = (int)colPix[0]-sub;
+                red = (int)channel[2]-sub,
+                green = (int)channel[1]-sub,
+                blue = (int)channel[0]-sub;
 
-            colPix[2] = (uint8_t)((int)(red>0)*red);//red>0?(uint8_t)red:0;
-            colPix[1] = (uint8_t)((int)(green>0)*green);//green>0?(uint8_t)green:0;
-            colPix[0] = (uint8_t)((int)(blue>0)*blue);//blue>0?(uint8_t)blue:0;
+            channel[2] = (uint8_t)((int)(red>0)*red);//red>0?(uint8_t)red:0;
+            channel[1] = (uint8_t)((int)(green>0)*green);//green>0?(uint8_t)green:0;
+            channel[0] = (uint8_t)((int)(blue>0)*blue);//blue>0?(uint8_t)blue:0;
         }
     }
 }

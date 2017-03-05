@@ -131,7 +131,7 @@ void GuiSingleton_cairo_init(
     int const inHeight,
     double const inScaleFactor,
     char const * const inWinTitle,
-    unsigned char * const inPixels,
+    uint32_t * const inPixels,
     void (*inKeyPressHandler)(char const),
     void (*inKeyReleaseHandler)(char const),
     void (*inTimerHandler)(void),
@@ -163,7 +163,7 @@ void GuiSingleton_cairo_init(
     assert(stride>0);
     assert(stride==dim.w*4);
     
-    image = cairo_image_surface_create_for_data(inPixels, CAIRO_FORMAT_RGB24, dim.w, dim.h, stride);
+    image = cairo_image_surface_create_for_data((unsigned char *)inPixels, CAIRO_FORMAT_RGB24, dim.w, dim.h, stride);
     gtk_init(0, NULL);
 
     window = gtk_window_new(GTK_WINDOW_TOPLEVEL);

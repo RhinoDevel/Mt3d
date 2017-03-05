@@ -4,13 +4,14 @@
 #ifndef MT_3D_SINGLETON
 #define MT_3D_SINGLETON
 
+#include <stdint.h>
 #include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-unsigned char * Mt3dSingleton_getPixels();
+uint32_t * Mt3dSingleton_getPixels();
 
 void Mt3dSingleton_input_onKeyPress(char const inChar);
 void Mt3dSingleton_input_onKeyRelease(char const inChar);

@@ -4,6 +4,7 @@
 #ifndef GUI_SINGLETON_CAIRO
 #define GUI_SINGLETON_CAIRO
 
+#include <stdint.h>
 #include <stdbool.h>
 
 #ifdef __cplusplus
@@ -20,7 +21,7 @@ void GuiSingleton_cairo_init(
     int const inHeight,
     double const inScaleFactor,
     char const * const inWinTitle,
-    unsigned char * const inPixels,
+    uint32_t * const inPixels,
     void (*inKeyPressHandler)(char const),
     void (*inKeyReleaseHandler)(char const),
     void (*inTimerHandler)(void),

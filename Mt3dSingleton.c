@@ -285,7 +285,7 @@ int Mt3dSingleton_getHeight()
     assert(o!=NULL);
     return o->constants.res.h;
 }
-unsigned char * Mt3dSingleton_getPixels()
+uint32_t * Mt3dSingleton_getPixels()
 {
     assert(o!=NULL);
     assert(o->pixels!=NULL);
@@ -355,8 +355,8 @@ void Mt3dSingleton_init(int const inWidth, int const inHeight, int const inMsPer
     }
 
     o->map = MapSample_create();
-    assert(sizeof *o->pixels==1);
-    o->pixels = malloc(width*height*4*sizeof *o->pixels);
+    assert(sizeof *o->pixels==4);
+    o->pixels = malloc(width*height*sizeof *o->pixels);
     assert(o->pixels!=NULL);
     o->posX = o->map->posX;
     o->posY = o->map->posY;
