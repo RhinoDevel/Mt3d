@@ -163,7 +163,12 @@ void GuiSingleton_cairo_init(
     assert(stride>0);
     assert(stride==dim.w*4);
     
-    image = cairo_image_surface_create_for_data((unsigned char *)inPixels, CAIRO_FORMAT_RGB24, dim.w, dim.h, stride);
+    image = cairo_image_surface_create_for_data(
+        (unsigned char *)inPixels,
+        CAIRO_FORMAT_RGB24,//CAIRO_FORMAT_ARGB32 // See: https://cairographics.org/manual/cairo-Image-Surfaces.html#cairo-format-t
+        dim.w,
+        dim.h,
+        stride);
     gtk_init(0, NULL);
 
     window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
