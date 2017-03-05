@@ -37,8 +37,7 @@ static void fill(
     struct Mt3dConstants const * const inC,
     struct Mt3dVariables const * const inV,
     double * const inOutIota,
-    double * const inOutEta,
-    enum HitType * const inOutHitType)
+    double * const inOutEta)
 {
     assert(inV->alpha>0.0 && inV->alpha<M_PI);
     assert(inV->beta>0.0 && inV->beta<M_PI);
@@ -92,30 +91,27 @@ static void fill(
 
             if(yRot==yMiddle)
             {
-                inOutHitType[pos] = HitType_none;
-                inOutIota[pos] = 0.0;
+                inOutIota[pos] = 0.0; // HitType_none
             }
             else
             {
                 if(yRot<yMiddle)
                 {
-                    inOutHitType[pos] = HitType_ceil;
-
                     double const delta = betaTopX-atan((yMiddle-yRot)/aX);
                     assert(delta<betaTopX);
-
-                    inOutIota[pos] = betaTopX-delta;
-                    assert(inOutIota[pos]<M_PI_2);
+                    
+                    inOutIota[pos] = betaTopX-delta; // HitType_ceil
+                    assert(inOutIota[pos]>0.0 && inOutIota[pos]<M_PI_2);
                 }
                 else
                 {
-                    inOutHitType[pos] = HitType_floor;
-
                     double const delta = betaTopX+atan((yRot-yMiddle)/aX);
                     assert(delta>betaTopX);
 
                     inOutIota[pos] = delta-betaTopX;
-                    assert(inOutIota[pos]<M_PI_2);
+                    assert(inOutIota[pos]>0.0 && inOutIota[pos]<M_PI_2);
+                    
+                    inOutIota[pos] = -inOutIota[pos]; // HitType_floor
                 }
             }
 
@@ -203,11 +199,13 @@ static void draw(void * inOut)
         uint32_t * const rowPix = input->o->pixels+rowByWidth;
 
         for(int x = 0;x<input->o->constants.res.w;++x)
-        {   
+        {
             int const pos = rowByWidth+x;
             uint32_t * const colPix = rowPix+x;
-            bool const hitsFloorOrCeil = input->o->hitType[pos]!=HitType_none;
-            double const zetaUnchecked = input->o->eta[pos]+input->o->gamma, // (might be out of expected range, but no problem - see usage below)
+            enum HitType const hitType = input->o->iota[pos]==0.0?HitType_none:input->o->iota[pos]>0.0?HitType_ceil:HitType_floor;
+            bool const hitsFloorOrCeil = hitType!=HitType_none;
+            double const absIota = fabs(input->o->iota[pos]),
+                zetaUnchecked = input->o->eta[pos]+input->o->gamma, // (might be out of expected range, but no problem - see usage below)
                 deltaX = cos(zetaUnchecked), // With parameter v in both rotation matrix..
                 deltaY = sin(zetaUnchecked); // ..formulas set to 1.0 [see Calc_fillRotated()].
             
@@ -268,7 +266,7 @@ static void draw(void * inOut)
                 {
                     double vEyeToFloorOrCeil = 0.0; // Side view: To hold vertical distance from player's eye to current cell's floor or ceiling.
 
-                    if(input->o->hitType[pos]==HitType_ceil)
+                    if(hitType==HitType_ceil)
                     {
                         vEyeToFloorOrCeil = cell->floor+cell->height-fullEyeHeight;
                     }
@@ -281,15 +279,15 @@ static void draw(void * inOut)
                     // Side view: Vertical distance from eye to where the line/"ray" is at current cell's border
                     //            (it may be above, below or at floor/ceiling):
                     //
-                    vEyeToExit = tan(input->o->iota[pos])*hEyeToExit;
+                    vEyeToExit = tan(absIota)*hEyeToExit;
                     
                     assert(vEyeToExit>0.0);
                     
                     if(vEyeToExit>=vEyeToFloorOrCeil)
                     { // => Line/"ray" hits floor/ceiling of current cell.
-                        countLen = vEyeToFloorOrCeil/sin(input->o->iota[pos]);
+                        countLen = vEyeToFloorOrCeil/sin(absIota);
                        
-                        double const d = countLen*cos(input->o->iota[pos]),
+                        double const d = countLen*cos(absIota),
                             dX = d*deltaX+input->o->posX, // Using distance as parameter v of rotation matrix formula by multiplying deltaX with d.
                             dY = CALC_CARTESIAN_Y(d*deltaY+kPosY, mapHeight); // Cartesian Y to cell Y coordinate conversion. // Using distance as parameter v of rotation matrix formula by multiplying deltaY with d.
 
@@ -326,12 +324,12 @@ static void draw(void * inOut)
                 // Will the NEXT cell's border get hit?
                 //
                 {
-                    double const heightForHit = fullEyeHeight+(input->o->hitType[pos]==HitType_floor?-vEyeToExit:vEyeToExit);
+                    double const heightForHit = fullEyeHeight+(hitType==HitType_floor?-vEyeToExit:vEyeToExit);
                     bool floorHit = false;
 
                     if(isBlock || (floorHit = heightForHit<cell->floor) || cell->floor+cell->height<heightForHit)
                     { // Yes, it is getting hit!
-                        countLen = hitsFloorOrCeil?vEyeToExit/sin(input->o->iota[pos]):hEyeToExit;
+                        countLen = hitsFloorOrCeil?vEyeToExit/sin(absIota):hEyeToExit;
                         
                         // **************************
                         // *** FILL PIXEL "BLOCK" *** Start
@@ -477,8 +475,7 @@ void Mt3d_draw(struct Mt3d * const inOutObj)
             &inOutObj->constants,
             &inOutObj->variables,
             inOutObj->iota,
-            inOutObj->eta,
-            inOutObj->hitType);
+            inOutObj->eta);
     }
 
 #ifdef __STDC_NO_THREADS__
@@ -583,9 +580,7 @@ struct Mt3d * Mt3d_create(struct Mt3dParams const * const inParams)
 
     double * const iota = malloc(pixelCount*sizeof *iota);
     assert(iota!=NULL);
-    enum HitType * const hitType = malloc(pixelCount*sizeof *hitType);
-    assert(hitType!=NULL);
-
+    
     double * const eta = malloc(pixelCount*sizeof *eta);
     assert(eta!=NULL);
 
@@ -598,7 +593,6 @@ struct Mt3d * Mt3d_create(struct Mt3dParams const * const inParams)
         //.variables
 
         .iota = iota,
-        .hitType = hitType,
         .eta = eta,
 
         .doFill = true, // => Forces fill on next render run [see Mt3d_setVariables()].

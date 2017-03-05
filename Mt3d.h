@@ -57,7 +57,6 @@ struct Mt3d
     // *****************************
 
     double * const iota; // One angle (radian) for each (x,y) pixel coordinate. Angle is between "d" (adjacent) and "e" (hypotenuse).
-    enum HitType * const hitType; // e reaches floor, ceiling, or none.
     double * const eta; // One value for each (x/y) pixel coordinate (in radian).
 
     // **********************
