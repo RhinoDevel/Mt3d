@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <math.h>
+#include <float.h>
 #ifndef __STDC_NO_THREADS__
     #include <threads.h>
 #endif //__STDC_NO_THREADS__d
@@ -406,6 +407,43 @@ static void draw(void * inOut)
             channel[0] = (uint8_t)((int)(blue>0)*blue);//blue>0?(uint8_t)blue:0;
         }
     }
+    
+    // Debugging: Get and show distances (it's funny!):
+    //
+//    # double * const distances = malloc(input->o->constants.res.h*input->o->constants.res.w*sizeof *distances);
+//    # double maxDistance = 0.0,
+//    #     minDistance = DBL_MAX;
+//
+//    # distances[pos] = countLen;
+//
+//    for(int d = 0;d<input->o->constants.res.h*input->o->constants.res.w;++d)
+//    {
+//        if(distances[d]>maxDistance)
+//        {
+//            maxDistance = distances[d];
+//        }
+//        if(distances[d]<minDistance)
+//        {
+//            minDistance = distances[d];
+//        }
+//    }
+//    maxDistance -= minDistance;
+//    for(int y = input->firstRow;y<=input->lastRow;++y)
+//    {
+//        int const rowByWidth = y*input->o->constants.res.w;
+//        uint32_t * const rowPix = input->o->pixels+rowByWidth;
+//
+//        for(int x = 0;x<input->o->constants.res.w;++x)
+//        {   
+//            int const pos = rowByWidth+x;
+//            uint32_t * const colPix = rowPix+x;
+//            
+//            uint8_t const val = /*255.0-*/(uint8_t)(255.0*(distances[pos]-minDistance)/maxDistance);
+//            
+//            *colPix = 0xFF000000ul+((uint32_t)val<<16)+((uint32_t)val<<8)+(uint32_t)val;
+//        }
+//    }
+//    free(distances);
 }
 
 void Mt3d_update(struct Mt3d * const inOutObj)
