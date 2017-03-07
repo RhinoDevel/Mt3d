@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <assert.h>
+#include <stdbool.h>
 
 #include "Calc.h"
 
@@ -13,7 +14,8 @@ int Calc_getZeroSector(double const inAngle)
 {
     assert(inAngle>=0.0&&inAngle<Calc_PiMul2);
 
-    return (int)CALC_TO_DEG(inAngle)/90; // (integer division)
+    return (int)(inAngle/M_PI_2);
+    //return (int)CALC_TO_DEG(inAngle)/90; // (integer division)
 }
 
 void Calc_fillRotated(double const inV, double const inW, double const inAngle, double * const inOutX, double * const inOutY)
@@ -25,12 +27,12 @@ void Calc_fillRotated(double const inV, double const inW, double const inAngle, 
     *inOutY = inV*s+inW*c;
 }
 
-uint16_t* Calc_createFirstQuadrantSinLut(size_t const inLen)
+uint16_t* Calc_createSinLut(size_t const inLen)
 {
-    /*static*/ double const sineScaling = (double)(maxScaledSine+1); // Corresponds to 1.0.
+    /*static*/ double const sineScaling = (double)maxScaledSine/2.0;
 
     uint16_t * const retVal = malloc(inLen*sizeof *retVal);
-    double const angleScaling = M_PI_2/inLen; // inLen corresponds to 90 degree.
+    double const angleScaling = Calc_PiMul2/inLen; // inLen corresponds to 360 degree.
 
     assert(retVal!=NULL);
 
@@ -38,13 +40,13 @@ uint16_t* Calc_createFirstQuadrantSinLut(size_t const inLen)
     {
         double const angle = angleScaling*(double)i,
             sine = sin(angle),
-            scaledSine = sineScaling*sine;
+            scaledSine = sineScaling*(sine+1.0);
 
-        assert(angle>=0.0 && angle<M_PI_2);
-        assert(sine>=0.0 && sine<1.0);
-        assert(scaledSine>=0.0/*&& scaledSine<=(double)maxScaledSine*/);
+        assert(angle>=0.0 && angle<Calc_PiMul2);
+        assert(sine>=-1.0 && sine<=1.0);
+        assert(scaledSine>=0.0 && scaledSine<=(double)maxScaledSine);
 
-        retVal[i] = (uint16_t)scaledSine; // Truncates
+        retVal[i] = (uint16_t)(scaledSine+0.5); // Rounds
 
         assert(retVal[i]<=maxScaledSine);
     }
@@ -56,18 +58,15 @@ double Calc_sin(uint16_t const * const inLut, size_t const inLen, double const i
 {
     assert(inLut!=NULL);
     assert(inLen>0);
+    
+    int const scaledAngle = (int)(inLen*CALC_ANGLE_TO_POS(inRad)/Calc_PiMul2);
+    uint16_t const scaledSine = inLut[scaledAngle];
 
-    assert(inRad>=0.0 && inRad<M_PI_2); // MT_TODO: TEST: Currently not implemented!
-
-    return ((double)(inLut[(int)((inLen*inRad)/M_PI_2)]))/maxScaledSineD;
+    return 2.0*(double)scaledSine/maxScaledSineD-1.0;
 }
 double Calc_cos(uint16_t const * const inSinLut, size_t const inLen, double const inRad)
 {
-    assert(inSinLut!=NULL);
-    assert(inLen>0);
-
-    assert(inRad>=0.0 && inRad<M_PI_2); // MT_TODO: TEST: Currently not implemented and next line depends on it!
-    return Calc_sin(inSinLut, inLen, M_PI_2-inRad);
+    return Calc_sin(inSinLut, inLen, inRad+M_PI_2);
 }
 double Calc_tan(uint16_t const * const inSinLut, size_t const inLen, double const inRad)
 {

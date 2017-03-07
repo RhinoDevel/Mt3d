@@ -44,13 +44,13 @@ int Calc_getZeroSector(double const inAngle);
  */
 void Calc_fillRotated(double const inV, double const inW, double const inAngle, double * const inOutX, double * const inOutY);
 
-/** Create and return Sine lookup-table for first quadrant of Cartesian coordinate system (from 0 to 90 degree).
+/** Create and return Sine lookup-table (from 0 to 360 degree).
  *
- * - Given length corresponds to angle 90.0 degree.
- * - Values stored in LUT are from 0 to 65535 (where 65535+1 = 65536 corresponds to 1.0).
+ * - Given length corresponds to angle 360.0 degree.
+ * - Values stored in LUT are from 0 to 65535 (where 65535+1 = 65536 corresponds to 0 at 360 degree).
  * - Caller takes ownership.
  */
-uint16_t* Calc_createFirstQuadrantSinLut(size_t const inLen);
+uint16_t* Calc_createSinLut(size_t const inLen);
 
 double Calc_sin(uint16_t const * const inLut, size_t const inLen, double const inRad);
 double Calc_cos(uint16_t const * const inSinLut, size_t const inLen, double const inRad);
