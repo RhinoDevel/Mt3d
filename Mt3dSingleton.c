@@ -10,6 +10,7 @@
 #include "Mt3dInput.h"
 #include "MapSample.h"
 #include "Mt3dSingleton.h"
+#include "SinSingleton.h"
 #include "Deb.h"
 
 static double const ALPHA = CALC_TO_RAD(60.0);
@@ -30,8 +31,8 @@ static double getBeta(double const inAlpha)
 {
     assert(width>0);
     assert(height>0);
-
-    return 2.0*atan((double)height*tan(inAlpha/2.0)/(double)width);
+    
+    return 2.0*atan((double)height*Calc_sin(SinSingleton_getLut(), 10000, inAlpha/2.0)/(double)width);
 }
 
 static bool pos_up()
