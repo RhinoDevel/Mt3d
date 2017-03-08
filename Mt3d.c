@@ -46,7 +46,8 @@ static void fill(
     assert(inC->res.h%2==0);
     assert(inC->res.w%2==0);
 
-    uint16_t const * const sinLut = SinSingleton_getLut();
+    uint16_t const * const sinLut = SinSingleton_getLut(),
+        * const asinLut = SinSingleton_getAsinLut();
     int x = 0,
         y = 0;
 
@@ -86,7 +87,7 @@ static void fill(
                 double const diff = xMiddle-xRot,
                     sX = sqrt(diff*diff+sXmiddleSqr);
 
-                betaTopX = asin(yMiddle/sX);
+                betaTopX = Calc_asin(asinLut, 10000, yMiddle/sX);
                 assert(betaTopX>0.0 && betaTopX<M_PI_2);
                 aX = yMiddle/Calc_tan(sinLut, 10000, betaTopX);
             }
@@ -120,7 +121,7 @@ static void fill(
             {
                 double const diff = yMiddle-yRot,
                     sY = sqrt(diff*diff+sYmiddleSqr),
-                    alphaLeftY = asin(xMiddle/sY); // To hold alphaX/2.
+                    alphaLeftY = Calc_asin(asinLut, 10000, xMiddle/sY); // To hold alphaX/2.
                 double epsilon = 0.0;
 
                 if(xRot<=xMiddle) // atan(0) equals 0, so it is OK, if equal.
