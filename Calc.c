@@ -7,8 +7,8 @@
 
 #include "Calc.h"
 
-static uint16_t const maxScaledSine = UINT16_MAX;
-static double const maxScaledSineD = (double)UINT16_MAX;
+static uint16_t const maxScaledVal = UINT16_MAX;
+static double const maxScaledValD = (double)UINT16_MAX;
 
 int Calc_getZeroSector(double const inAngle)
 {
@@ -29,10 +29,10 @@ void Calc_fillRotated(double const inV, double const inW, double const inAngle, 
 
 uint16_t* Calc_createSinLut(size_t const inLen)
 {
-    /*static*/ double const sineScaling = (double)maxScaledSine/2.0;
+    /*static*/ double const sineScaling = maxScaledValD/2.0;
 
     uint16_t * const retVal = malloc(inLen*sizeof *retVal);
-    double const angleScaling = Calc_PiMul2/inLen; // inLen corresponds to 360 degree.
+    double const angleScaling = Calc_PiMul2/(double)inLen; // inLen corresponds to 360 degree.
 
     assert(retVal!=NULL);
 
@@ -44,11 +44,38 @@ uint16_t* Calc_createSinLut(size_t const inLen)
 
         assert(angle>=0.0 && angle<Calc_PiMul2);
         assert(sine>=-1.0 && sine<=1.0);
-        assert(scaledSine>=0.0 && scaledSine<=(double)maxScaledSine);
+        assert(scaledSine>=0.0 && scaledSine<=maxScaledValD);
 
         retVal[i] = (uint16_t)(scaledSine+0.5); // Rounds
 
-        assert(retVal[i]<=maxScaledSine);
+        assert(retVal[i]<=maxScaledVal);
+    }
+
+    return retVal;
+}
+
+uint16_t* Calc_createArcSinLut(size_t const inLen)
+{
+    /*static*/ double const angleScaling = maxScaledValD/M_PI;
+
+    uint16_t * const retVal = malloc(inLen*sizeof *retVal);
+    double const sineScaling = 2.0/(double)inLen; // inLen corresponds to +1.0.
+
+    assert(retVal!=NULL);
+
+    for(size_t i = 0;i<inLen;++i)
+    {
+        double const sine = sineScaling*(double)i-1.0,
+            angle = asin(sine),
+            scaledAngle = (angle+M_PI_2)*angleScaling;
+
+        assert(sine>=-1.0 && sine<=1.0);
+        assert(angle>=-M_PI_2 && angle<M_PI_2);
+        assert(scaledAngle>=0.0 && scaledAngle<=maxScaledValD);
+
+        retVal[i] = (uint16_t)(scaledAngle+0.5); // Rounds
+
+        assert(retVal[i]<=maxScaledVal);
     }
 
     return retVal;
@@ -59,10 +86,10 @@ double Calc_sin(uint16_t const * const inLut, size_t const inLen, double const i
     assert(inLut!=NULL);
     assert(inLen>0);
     
-    int const scaledAngle = (int)(inLen*CALC_ANGLE_TO_POS(inRad)/Calc_PiMul2);
+    int const scaledAngle = (int)((double)inLen*CALC_ANGLE_TO_POS(inRad)/Calc_PiMul2);
     uint16_t const scaledSine = inLut[scaledAngle];
 
-    return 2.0*(double)scaledSine/maxScaledSineD-1.0;
+    return 2.0*(double)scaledSine/maxScaledValD-1.0;
 }
 double Calc_cos(uint16_t const * const inSinLut, size_t const inLen, double const inRad)
 {
@@ -71,6 +98,17 @@ double Calc_cos(uint16_t const * const inSinLut, size_t const inLen, double cons
 double Calc_tan(uint16_t const * const inSinLut, size_t const inLen, double const inRad)
 {
     return Calc_sin(inSinLut, inLen, inRad)/Calc_cos(inSinLut, inLen, inRad);
+}
+
+double Calc_asin(uint16_t const * const inLut, size_t const inLen, double const inSin)
+{
+    assert(inLut!=NULL);
+    assert(inLen>0);
+    
+    int const scaledSin = (inSin+1.0)*((double)inLen/2.0);
+    uint16_t const scaledAngle = inLut[scaledSin];
+
+    return M_PI*(double)scaledAngle/maxScaledValD-M_PI_2;
 }
 
 double Calc_getTriangleSideA(double const inGammaRad, double const inCleftOfAltitudeC, double const inCrightOfAltitudeC)

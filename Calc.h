@@ -52,9 +52,19 @@ void Calc_fillRotated(double const inV, double const inW, double const inAngle, 
  */
 uint16_t* Calc_createSinLut(size_t const inLen);
 
+/** Create and return Arcus Sine lookup-table (from -1.0 to +1.0).
+ *
+ * - Given length corresponds to +1.0 degree.
+ * - Values stored in LUT are from 0 to 65535 (where 65535+1 = 65536 corresponds to 0 degree at +1.0).
+ * - Caller takes ownership.
+ */
+uint16_t* Calc_createArcSinLut(size_t const inLen);
+
 double Calc_sin(uint16_t const * const inLut, size_t const inLen, double const inRad);
 double Calc_cos(uint16_t const * const inSinLut, size_t const inLen, double const inRad);
 double Calc_tan(uint16_t const * const inSinLut, size_t const inLen, double const inRad);
+
+double Calc_asin(uint16_t const * const inLut, size_t const inLen, double const inSin);
 
 /** Return the length of triangle's side a for given parameters.
  *
