@@ -46,16 +46,14 @@ static void fill(
     assert(inC->res.h%2==0);
     assert(inC->res.w%2==0);
 
-    uint16_t const * const sinLut = SinSingleton_getLut(),
-        * const asinLut = SinSingleton_getAsinLut();
     int x = 0,
         y = 0;
 
     double const dHeight = (double)inC->res.h,
         xMiddle = (double)(inC->res.w-1)/2.0,
         yMiddle = (dHeight-1.0)/2.0,
-        sXmiddle = yMiddle/Calc_sin(sinLut, 10000, inV->beta/2.0),
-        sYmiddle = xMiddle/Calc_sin(sinLut, 10000, inV->alpha/2.0),
+        sXmiddle = yMiddle/Calc_sin(SinSingleton_sinLut, SinSingleton_len, inV->beta/2.0),
+        sYmiddle = xMiddle/Calc_sin(SinSingleton_sinLut, SinSingleton_len, inV->alpha/2.0),
         sXmiddleSqr = sXmiddle*sXmiddle,
         sYmiddleSqr = sYmiddle*sYmiddle;
 
@@ -87,9 +85,9 @@ static void fill(
                 double const diff = xMiddle-xRot,
                     sX = sqrt(diff*diff+sXmiddleSqr);
 
-                betaTopX = Calc_asin(asinLut, 10000, yMiddle/sX);
+                betaTopX = Calc_asin(SinSingleton_asinLut, SinSingleton_len, yMiddle/sX);
                 assert(betaTopX>0.0 && betaTopX<M_PI_2);
-                aX = yMiddle/Calc_tan(sinLut, 10000, betaTopX);
+                aX = yMiddle/Calc_tan(SinSingleton_sinLut, SinSingleton_len, betaTopX);
             }
 
             double const absOppositeY = fabs(yMiddle-yRot),
@@ -102,7 +100,7 @@ static void fill(
             else
             {
                 double const hypotenuseY = sqrt(absOppositeY*absOppositeY+aXsqr),
-                    partDelta = Calc_asin(asinLut, 10000, absOppositeY/hypotenuseY);
+                    partDelta = Calc_asin(SinSingleton_asinLut, SinSingleton_len, absOppositeY/hypotenuseY);
                 
                 if(yRot<yMiddle)
                 {
@@ -127,10 +125,10 @@ static void fill(
             {
                 double const diff = yMiddle-yRot,
                     sY = sqrt(diff*diff+sYmiddleSqr),
-                    alphaLeftY = Calc_asin(asinLut, 10000, xMiddle/sY), // To hold alphaX/2.
+                    alphaLeftY = Calc_asin(SinSingleton_asinLut, SinSingleton_len, xMiddle/sY), // To hold alphaX/2.
                     absOppositeX = fabs(xMiddle-xRot),
                     hypotenuseX = sqrt(absOppositeX*absOppositeX+aXsqr),
-                    partEpsilon = Calc_asin(asinLut, 10000, absOppositeX/hypotenuseX);
+                    partEpsilon = Calc_asin(SinSingleton_asinLut, SinSingleton_len, absOppositeX/hypotenuseX);
                     
                 double epsilon = 0.0;
 
@@ -152,9 +150,8 @@ static void fill(
 
 static bool posStep(struct Mt3d * const inOutObj, double const inIota) // Iota: Complete angle in wanted direction (0 rad <= a < 2*PI rad).
 {
-    uint16_t const * const sinLut = SinSingleton_getLut();
-    double const x = inOutObj->posX+PLAYER_STEP_LEN*Calc_cos(sinLut, 10000, inIota),
-        y = inOutObj->posY-PLAYER_STEP_LEN*Calc_sin(sinLut, 10000, inIota); // Subtraction, because cell coordinate system starts on top, Cartesian coordinate system at bottom.
+    double const x = inOutObj->posX+PLAYER_STEP_LEN*Calc_cos(SinSingleton_sinLut, SinSingleton_len, inIota),
+        y = inOutObj->posY-PLAYER_STEP_LEN*Calc_sin(SinSingleton_sinLut, SinSingleton_len, inIota); // Subtraction, because cell coordinate system starts on top, Cartesian coordinate system at bottom.
     struct Cell const * const cell = inOutObj->map->cells+(int)y*inOutObj->map->width+(int)x;
     
     if(cell->type==CellType_block_default) // MT_TODO: TEST: Player has no width!
@@ -199,7 +196,6 @@ bool Mt3d_pos_leftOrRight(struct Mt3d * const inOutObj, bool inLeft)
 
 static void draw(void * inOut)
 {
-    uint16_t const * const sinLut = SinSingleton_getLut();
     struct DrawInput const * const input = (struct DrawInput const *)inOut;
     int const truncPosX = (int)input->o->posX,
             truncPosY = (int)input->o->posY;
@@ -221,8 +217,8 @@ static void draw(void * inOut)
             bool const hitsFloorOrCeil = hitType!=HitType_none;
             double const absIota = fabs(input->o->iota[pos]),
                 zetaUnchecked = input->o->eta[pos]+input->o->gamma, // (might be out of expected range, but no problem - see usage below)
-                deltaX = Calc_cos(sinLut, 10000, zetaUnchecked), // With parameter v in both rotation matrix..
-                deltaY = Calc_sin(sinLut, 10000, zetaUnchecked); // ..formulas set to 1.0 [see Calc_fillRotated()].
+                deltaX = Calc_cos(SinSingleton_sinLut, SinSingleton_len, zetaUnchecked), // With parameter v in both rotation matrix..
+                deltaY = Calc_sin(SinSingleton_sinLut, SinSingleton_len, zetaUnchecked); // ..formulas set to 1.0 [see Calc_fillRotated()].
             
             assert(deltaX!=0.0); // Implement special case!
             assert(deltaY!=0.0); // Implement special case!
@@ -294,15 +290,15 @@ static void draw(void * inOut)
                     // Side view: Vertical distance from eye to where the line/"ray" is at current cell's border
                     //            (it may be above, below or at floor/ceiling):
                     //
-                    vEyeToExit = Calc_tan(sinLut, 10000, absIota)*hEyeToExit;
+                    vEyeToExit = Calc_tan(SinSingleton_sinLut, SinSingleton_len, absIota)*hEyeToExit;
                     assert(vEyeToExit>0.0);
                     
                     if(vEyeToExit>=vEyeToFloorOrCeil)
                     { // => Line/"ray" hits floor/ceiling of current cell.
-                        countLen = vEyeToFloorOrCeil/Calc_sin(sinLut, 10000, absIota);
+                        countLen = vEyeToFloorOrCeil/Calc_sin(SinSingleton_sinLut, SinSingleton_len, absIota);
                         assert(countLen>=0.0);
                        
-                        double const d = countLen*Calc_cos(sinLut, 10000, absIota),
+                        double const d = countLen*Calc_cos(SinSingleton_sinLut, SinSingleton_len, absIota),
                             dX = d*deltaX+input->o->posX, // Using distance as parameter v of rotation matrix formula by multiplying deltaX with d.
                             dY = CALC_CARTESIAN_Y(d*deltaY+kPosY, mapHeight); // Cartesian Y to cell Y coordinate conversion. // Using distance as parameter v of rotation matrix formula by multiplying deltaY with d.
 
@@ -344,7 +340,7 @@ static void draw(void * inOut)
 
                     if(isBlock || (floorHit = heightForHit<cell->floor) || cell->floor+cell->height<heightForHit)
                     { // Yes, it is getting hit!
-                        countLen = hitsFloorOrCeil?vEyeToExit/Calc_sin(sinLut, 10000, absIota):hEyeToExit;
+                        countLen = hitsFloorOrCeil?vEyeToExit/Calc_sin(SinSingleton_sinLut, SinSingleton_len, absIota):hEyeToExit;
                         assert(countLen>=0.0);
                         
                         // **************************

@@ -10,9 +10,11 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-  
-uint16_t* SinSingleton_getLut(); // Caller does NOT take ownership!
-uint16_t* SinSingleton_getAsinLut(); // Caller does NOT take ownership!
+
+extern size_t SinSingleton_len;
+extern uint16_t * SinSingleton_sinLut;
+extern uint16_t * SinSingleton_asinLut;
+
 void SinSingleton_init(size_t const inLutLen);
 void SinSingleton_deinit();
 

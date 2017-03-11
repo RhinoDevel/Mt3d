@@ -7,38 +7,36 @@
 #include <stdlib.h>
 #include <assert.h>
 
-static uint16_t * lut = NULL;
-static uint16_t * asinLut = NULL;
-
-uint16_t* SinSingleton_getLut()
-{
-    return lut; // Caller does NOT take ownership!
-}
-
-uint16_t* SinSingleton_getAsinLut()
-{
-    return asinLut; // Caller does NOT take ownership!
-}
+size_t SinSingleton_len = 0;
+uint16_t * SinSingleton_sinLut = NULL;
+uint16_t * SinSingleton_asinLut = NULL;
 
 void SinSingleton_init(size_t const inLutLen)
 {
-    assert(lut==NULL);
-    assert(asinLut==NULL);
+    assert(SinSingleton_len==0);
+    assert(SinSingleton_sinLut==NULL);
+    assert(SinSingleton_asinLut==NULL);
     
-    lut = Calc_createSinLut(inLutLen);
-    assert(lut!=NULL);
+    SinSingleton_len = inLutLen;
     
-    asinLut = Calc_createArcSinLut(inLutLen);
-    assert(asinLut!=NULL);
+    SinSingleton_sinLut = Calc_createSinLut(SinSingleton_len);
+    assert(SinSingleton_sinLut!=NULL);
+    
+    SinSingleton_asinLut = Calc_createArcSinLut(SinSingleton_len);
+    assert(SinSingleton_asinLut!=NULL);
 }
 
 void SinSingleton_deinit()
 {
-    assert(lut!=NULL);
-    free(lut);
-    lut = NULL;
+    assert(SinSingleton_len>0);
     
-    assert(asinLut!=NULL);
-    free(asinLut);
-    asinLut = NULL;
+    assert(SinSingleton_sinLut!=NULL);
+    free(SinSingleton_sinLut);
+    SinSingleton_sinLut = NULL;
+    
+    assert(SinSingleton_asinLut!=NULL);
+    free(SinSingleton_asinLut);
+    SinSingleton_asinLut = NULL;
+    
+    SinSingleton_len = 0;
 }

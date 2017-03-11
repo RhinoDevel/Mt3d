@@ -12,11 +12,12 @@
 #include "SinSingleton.h"
 #include "Calc.h"
 
-static int const WIDTH = 384;
-static int const HEIGHT = 216;
+static int const WIDTH = 320;//384;
+static int const HEIGHT = 200;//216;
 static double const SCALE_FACTOR = 2.0;
 static double const GAME_LOOP_INTERVAL = 40.0;
 static double const MS_PER_UPDATE = 40.0;/*GAME_LOOP_INTERVAL*/;//16.0; // 1000/60 ms.
+static size_t const LUT_LEN = 10000;
 
 static void render(double const inLag)
 {
@@ -27,7 +28,7 @@ static void render(double const inLag)
 
 int main(int argc, char *argv[])
 {
-    SinSingleton_init(10000);
+    SinSingleton_init(LUT_LEN);
     
     Mt3dSingleton_init(WIDTH, HEIGHT, (int)MS_PER_UPDATE, GuiSingleton_cairo_toggleFullscreen, GuiSingleton_cairo_quit); // Initializes 3D controller singleton. // Truncates
     LoopSingleton_init(MS_PER_UPDATE, Mt3dSingleton_update, render);
