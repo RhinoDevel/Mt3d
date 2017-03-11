@@ -52,8 +52,8 @@ static void fill(
     double const dHeight = (double)inC->res.h,
         xMiddle = (double)(inC->res.w-1)/2.0,
         yMiddle = (dHeight-1.0)/2.0,
-        sXmiddle = yMiddle/Calc_sin(SinSingleton_sinLut, SinSingleton_len, inV->beta/2.0),
-        sYmiddle = xMiddle/Calc_sin(SinSingleton_sinLut, SinSingleton_len, inV->alpha/2.0),
+        sXmiddle = yMiddle/LUT_SIN(inV->beta/2.0),
+        sYmiddle = xMiddle/LUT_SIN(inV->alpha/2.0),
         sXmiddleSqr = sXmiddle*sXmiddle,
         sYmiddleSqr = sYmiddle*sYmiddle;
 
@@ -85,7 +85,7 @@ static void fill(
                 double const diff = xMiddle-xRot,
                     sX = sqrt(diff*diff+sXmiddleSqr);
 
-                betaTopX = Calc_asin(SinSingleton_asinLut, SinSingleton_len, yMiddle/sX);
+                betaTopX = LUT_ASIN(yMiddle/sX);
                 assert(betaTopX>0.0 && betaTopX<M_PI_2);
                 aX = yMiddle/Calc_tan(SinSingleton_sinLut, SinSingleton_len, betaTopX);
             }
@@ -100,7 +100,7 @@ static void fill(
             else
             {
                 double const hypotenuseY = sqrt(absOppositeY*absOppositeY+aXsqr),
-                    partDelta = Calc_asin(SinSingleton_asinLut, SinSingleton_len, absOppositeY/hypotenuseY);
+                    partDelta = LUT_ASIN(absOppositeY/hypotenuseY);
                 
                 if(yRot<yMiddle)
                 {
@@ -125,10 +125,10 @@ static void fill(
             {
                 double const diff = yMiddle-yRot,
                     sY = sqrt(diff*diff+sYmiddleSqr),
-                    alphaLeftY = Calc_asin(SinSingleton_asinLut, SinSingleton_len, xMiddle/sY), // To hold alphaX/2.
+                    alphaLeftY = LUT_ASIN(xMiddle/sY), // To hold alphaX/2.
                     absOppositeX = fabs(xMiddle-xRot),
                     hypotenuseX = sqrt(absOppositeX*absOppositeX+aXsqr),
-                    partEpsilon = Calc_asin(SinSingleton_asinLut, SinSingleton_len, absOppositeX/hypotenuseX);
+                    partEpsilon = LUT_ASIN(absOppositeX/hypotenuseX);
                     
                 double epsilon = 0.0;
 
@@ -151,7 +151,7 @@ static void fill(
 static bool posStep(struct Mt3d * const inOutObj, double const inIota) // Iota: Complete angle in wanted direction (0 rad <= a < 2*PI rad).
 {
     double const x = inOutObj->posX+PLAYER_STEP_LEN*Calc_cos(SinSingleton_sinLut, SinSingleton_len, inIota),
-        y = inOutObj->posY-PLAYER_STEP_LEN*Calc_sin(SinSingleton_sinLut, SinSingleton_len, inIota); // Subtraction, because cell coordinate system starts on top, Cartesian coordinate system at bottom.
+        y = inOutObj->posY-PLAYER_STEP_LEN*LUT_SIN(inIota); // Subtraction, because cell coordinate system starts on top, Cartesian coordinate system at bottom.
     struct Cell const * const cell = inOutObj->map->cells+(int)y*inOutObj->map->width+(int)x;
     
     if(cell->type==CellType_block_default) // MT_TODO: TEST: Player has no width!
@@ -218,7 +218,7 @@ static void draw(void * inOut)
             double const absIota = fabs(input->o->iota[pos]),
                 zetaUnchecked = input->o->eta[pos]+input->o->gamma, // (might be out of expected range, but no problem - see usage below)
                 deltaX = Calc_cos(SinSingleton_sinLut, SinSingleton_len, zetaUnchecked), // With parameter v in both rotation matrix..
-                deltaY = Calc_sin(SinSingleton_sinLut, SinSingleton_len, zetaUnchecked); // ..formulas set to 1.0 [see Calc_fillRotated()].
+                deltaY = LUT_SIN(zetaUnchecked); // ..formulas set to 1.0 [see Calc_fillRotated()].
             
             assert(deltaX!=0.0); // Implement special case!
             assert(deltaY!=0.0); // Implement special case!
@@ -295,7 +295,7 @@ static void draw(void * inOut)
                     
                     if(vEyeToExit>=vEyeToFloorOrCeil)
                     { // => Line/"ray" hits floor/ceiling of current cell.
-                        countLen = vEyeToFloorOrCeil/Calc_sin(SinSingleton_sinLut, SinSingleton_len, absIota);
+                        countLen = vEyeToFloorOrCeil/LUT_SIN(absIota);
                         assert(countLen>=0.0);
                        
                         double const d = countLen*Calc_cos(SinSingleton_sinLut, SinSingleton_len, absIota),
@@ -340,7 +340,7 @@ static void draw(void * inOut)
 
                     if(isBlock || (floorHit = heightForHit<cell->floor) || cell->floor+cell->height<heightForHit)
                     { // Yes, it is getting hit!
-                        countLen = hitsFloorOrCeil?vEyeToExit/Calc_sin(SinSingleton_sinLut, SinSingleton_len, absIota):hEyeToExit;
+                        countLen = hitsFloorOrCeil?vEyeToExit/LUT_SIN(absIota):hEyeToExit;
                         assert(countLen>=0.0);
                         
                         // **************************

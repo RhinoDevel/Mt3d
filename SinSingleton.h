@@ -11,6 +11,9 @@
 extern "C" {
 #endif
 
+#define LUT_SIN(x) Calc_sin(SinSingleton_sinLut, SinSingleton_len, (x))
+#define LUT_ASIN(x) Calc_asin(SinSingleton_asinLut, SinSingleton_len, (x))
+    
 extern size_t SinSingleton_len;
 extern uint16_t * SinSingleton_sinLut;
 extern uint16_t * SinSingleton_asinLut;
