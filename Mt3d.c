@@ -92,15 +92,21 @@ static void fill(
                 aX = yMiddle/Calc_tan(sinLut, 10000, betaTopX);
             }
 
-            if(yRot==yMiddle)
+            double const absOppositeY = fabs(yMiddle-yRot),
+                aXsqr = aX*aX;
+            
+            if(absOppositeY==0.0)
             {
                 inOutIota[pos] = 0.0; // HitType_none
             }
             else
             {
+                double const hypotenuseY = sqrt(absOppositeY*absOppositeY+aXsqr),
+                    partDelta = Calc_asin(asinLut, 10000, absOppositeY/hypotenuseY);
+                
                 if(yRot<yMiddle)
                 {
-                    double const delta = betaTopX-atan((yMiddle-yRot)/aX);
+                    double const delta = betaTopX-partDelta/*atan((yMiddle-yRot)/aX)*/;
                     assert(delta<betaTopX);
                     
                     inOutIota[pos] = betaTopX-delta; // HitType_ceil
@@ -108,7 +114,7 @@ static void fill(
                 }
                 else
                 {
-                    double const delta = betaTopX+atan((yRot-yMiddle)/aX);
+                    double const delta = betaTopX+partDelta/*atan((yRot-yMiddle)/aX)*/;
                     assert(delta>betaTopX);
 
                     inOutIota[pos] = delta-betaTopX;
@@ -121,16 +127,20 @@ static void fill(
             {
                 double const diff = yMiddle-yRot,
                     sY = sqrt(diff*diff+sYmiddleSqr),
-                    alphaLeftY = Calc_asin(asinLut, 10000, xMiddle/sY); // To hold alphaX/2.
+                    alphaLeftY = Calc_asin(asinLut, 10000, xMiddle/sY), // To hold alphaX/2.
+                    absOppositeX = fabs(xMiddle-xRot),
+                    hypotenuseX = sqrt(absOppositeX*absOppositeX+aXsqr),
+                    partEpsilon = Calc_asin(asinLut, 10000, absOppositeX/hypotenuseX);
+                    
                 double epsilon = 0.0;
 
-                if(xRot<=xMiddle) // atan(0) equals 0, so it is OK, if equal.
+                if(xRot<=xMiddle) // atan(0) equals 0 [asin(0) also], so it is OK, if equal.
                 {
-                    epsilon = alphaLeftY-atan((xMiddle-xRot)/aX);
+                    epsilon = alphaLeftY-partEpsilon/*atan((xMiddle-xRot)/aX)*/;
                 }
                 else
                 {
-                    epsilon = alphaLeftY+atan((xRot-xMiddle)/aX);
+                    epsilon = alphaLeftY+partEpsilon/*atan((xRot-xMiddle)/aX)*/;
                 }
 
                 inOutEta[pos] = alphaLeftY-epsilon; // Eta is a pre-calculated angle to be used with player view angle, later.

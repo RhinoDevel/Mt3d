@@ -32,7 +32,10 @@ static double getBeta(double const inAlpha)
     assert(width>0);
     assert(height>0);
     
-    return 2.0*atan((double)height*Calc_sin(SinSingleton_getLut(), 10000, inAlpha/2.0)/(double)width);
+    double const opposite = (double)height*Calc_sin(SinSingleton_getLut(), 10000, inAlpha/2.0),
+        hypotenuse = sqrt(opposite*opposite+width*width);
+    
+    return 2.0*Calc_asin(SinSingleton_getAsinLut(), 10000, opposite/hypotenuse)/*atan((double)height*Calc_sin(SinSingleton_getLut(), 10000, inAlpha/2.0)/(double)width)*/;
 }
 
 static bool pos_up()
