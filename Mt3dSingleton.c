@@ -225,6 +225,7 @@ static void applyInput()
     if(input->toggleFullscreen)
     {
         toggleFullscreen();
+        Mt3dInput_setFlagByChar('f', !input->toggleFullscreen, input); // (return value ignored) // MT_TODO: TEST: STUPID HARD-CODED WORKAROUND - IMPLEMENT CORRECTLY!
     }
 
     if(input->pos_left!=input->pos_right)
